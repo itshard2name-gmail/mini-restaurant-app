@@ -171,11 +171,11 @@ The entire stack is containerized.
 
 ---
 
-## 7. Current Implementation Status & Key Decisions (Mission Handover)
+## 7. Release v1.0.0 Status
 
-***(As of Mission Checkpoint: 2025-12-21)***
+***(Released: 2025-12-21)***
 
-This section summarizes the concrete implementation details and temporary configurations active in the codebase. **Use this as the source of truth for the next development phase.**
+This section summarizes the concrete implementation details of the first major release.
 
 ### 7.1 Completed Features
 1.  **Admin Dashboard (UI/UX)**:

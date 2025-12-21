@@ -1,7 +1,7 @@
 # Secrets & Keys
 .env
-.env.*
-! .env.example
+.env.local
+.env.backup
 *.pem
 *.key
 *.p12
