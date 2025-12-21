@@ -1,286 +1,30 @@
 # System Design Specification: Mini Restaurant App
 
-## 1. System Architecture Overview
-This system adopts a modern **Microservices** and **Micro-frontends** architecture, separating concerns between a secure backend service mesh and a composed frontend interface.
-
-### 1.1 Traffic Flow & Network Topology
-The backend architecture is designed with a "Defense in Depth" strategy:
-
-1.  **Public Zone (DMZ)**:
-    -   **Envoy Proxy**: Acts as the single entry point (Edge Proxy) for all external traffic. It handles TLS termination (planned) and initial routing.
-    -   *Port*: Exposed on `8080`.
-
-2.  **Internal Zone (Trust Zone)**:
-    -   **Spring Cloud Gateway**: The internal API Gateway. It performs:
-        -   **Route Dispatching**: `/auth/**` -> Auth Service, `/orders/**` -> Order Service.
-        -   **Cross-Cutting Concerns**: Request logging, correlation ID injection (future), and global error handling.
-    -   **Service Discovery (Eureka)**: All internal microservices satisfy the Client-Side Discovery pattern by registering with Eureka.
-
-3.  **Application Zone**:
-    -   **Microservices**: (Auth, Order, Notification) running in isolated containers, communicating via REST (Store-and-Forward) and RabbitMQ (Fire-and-Forget).
-
-**Flow Diagram**:
-`User (Browser)` -> `Envoy (:8080)` -> `Spring Cloud Gateway (:8080 internal)` -> `Microservices`
-
-### 1.2 Micro-frontend Architecture
-The frontend utilizes **Module Federation** to stitch together independent applications at runtime:
-
--   **Host App (Shell)**:
-    -   **Role**: The main container application. Handles global layout (Navbar), Authentication state (Pinia), and Routing.
-    -   **Tech**: Vue 3 + Vite.
-    -   **Responsibility**: Loads sub-apps dynamically based on routes (`/`, `/admin`).
-    -   **Features**: Conditional Navigation (Admin link visible only to `ROLE_ADMIN`).
--   **Sub-apps (Remotes)**:
-    -   **Sub-app-menu**: Displays the food menu and cart. Mounted at `/`.
-    -   **Sub-app-admin**: Provides the order management dashboard. Mounted at `/admin`.
-    -   **Isolation**: Each sub-app builds independently and exposes components (e.g., `MenuApp`, `AdminDashboard`) to the Host.
+> **Version**: 1.1 (Released: 2025-12-21)
+> **Status**: Active Development
+> **Authors**: Antigravity AI Agent
 
 ---
 
-## 2. Technology Stack
+## 1. Executive Summary
 
-### 2.1 Backend (Java Ecosystem)
--   **Language**: Java 17 (LTS)
--   **Framework**: Spring Boot 3.2.0
--   **Cloud Native**: Spring Cloud 2023.0.0 (Gateway, Eureka)
--   **Build Tool**: Maven (Multi-module project)
--   **Database**: MySQL 8.0 (Relational Data), Redis (Cache/Session)
--   **Messaging**: RabbitMQ (AMQP)
--   **Security**: Spring Security 6, JJWT, Bouncy Castle (Encryption)
+The **Mini Restaurant App** is a scalable, cloud-native e-commerce platform designed to demonstrate modern software architecture. It facilitates:
+1.  **Customer Operations**: Browsing menus, managing carts, and placing orders.
+2.  **Admin Operations**: Order management and Dashboard monitoring.
 
-### 2.2 Frontend (Modern Web)
--   **Framework**: Vue 3.5.24 (Composition API, Script Setup)
--   **Build Tool**: Vite 7.2.4
--   **Federation**: `@originjs/vite-plugin-federation` v1.4.1
--   **Styling**: Tailwind CSS 3.4.17
--   **State Management**: Pinia
--   **HTTP Client**: Axios
-
-### 2.3 Module Federation Constraints
--   **Local Development**: Vite's dev server (`npm run dev`) does **not** emit `remoteEntry.js` by default.
--   **Requirement**: All Remote Apps (Sub-apps) **MUST** be built and served via `npm run preview` to be consumable by the Host App. Host App can still use `npm run dev`.
+The system is built on a **Microservices** backend (Spring Cloud) and a **Micro-frontend** client (Vue 3 Module Federation), emphasizing separation of concerns, scalability, and security.
 
 ---
 
-## 3. Security Architecture
+## 2. High-Level Architecture
 
-### 3.1 Encryption Pipeline (RSA + BCrypt)
-To protect sensitive credentials during transit and at rest:
-1.  **Frontend**:
-    -   On Login/Register, the client fetches the **Public Key** via `/auth/public-key`.
-    -   The password is encrypted using `JSEncrypt` (RSA) before being sent in the JSON payload.
-2.  **Backend**:
-    -   **Decryption**: The Auth Service uses its **Private Key** (stored in `private_key.pem`) to decrypt the payload.
-    -   **Hashing**: The raw password is then hashed using `BCrypt` before comparison or storage in the database.
-
-### 3.2 Authentication & Authorization (JWT + RBAC)
--   **JWT Structure**:
-    -   **Header**: `ALGORITHM: HS256`
-    -   **Payload**: `sub: username`, `roles: ["ROLE_USER", "ROLE_ADMIN"]`, `exp: timestamp`
-    -   **Signature**: HMAC-SHA256 purely used for integrity verification.
--   **Flow**:
-    1.  User logs in -> Auth Service validates -> Generates JWT.
-        *   *Implementation Note*: Currently, the login flow supports a list of roles, which are embedded in the token claims.
-    2.  JWT is returned to the client and stored in `localStorage`.
-    3.  Client attaches `Authorization: Bearer <token>` to all subsequent requests.
-    4.  **Gateway/Service**: A `JwtAuthenticationFilter` intercepts requests, parses the token, extracts `roles`, and establishes the Security Context.
--   **Redis Token Management**:
-    -   Tokens are stored in Redis with a TTL matching the creation expiration (allowlist approach/session tracking).
-
-### 3.3 Configuration Security
--   **Environment Variables**: Sensitive data (Database URLs, JWT Secrets) are **never hardcoded**. They are injected via `docker-compose.yml` using `.env` files.
-    -   Example: `JWT_SECRET=${JWT_SECRET}` passed to `auth-service` and `order-service`.
-
----
-
-## 4. Business Logic & Messaging
-
-### 4.1 Order Snapshot Pattern
-To ensure data integrity of historical orders:
--   **Problem**: If a product price changes in the `Menu` table, historical orders should not change value.
--   **Solution**: The `OrderItem` entity stores a **Snapshot** of the product data at the time of purchase.
-    -   Fields: `snapshotName`, `snapshotPrice`.
-    -   This decouples the `Order` history from current `Product` state.
-
-### 4.2 Asynchronous Messaging (RabbitMQ)
--   **Exchange**: `order.exchange` (Topic Exchange)
--   **Routing Key**: `order.create`
--   **Flow**:
-    1.  **Producer (Order Service)**: When an order is saved (`status: PENDING`), a message `{ orderId: 123, status: "PENDING" }` is published.
-    2.  **Consumer (Future Notification Service)**: Listens to the queue bound to `order.create`.
-    3.  **Action**: Sends an email/SMS or pushes a WebSocket update to the admin dashboard.
-
----
-
-## 5. Development & Deployment
-
-### 5.1 One-Click Environment (Docker)
-The entire stack is containerized.
--   **Start**: `docker-compose up --build -d`
--   **Stop**: `docker-compose down`
--   **Dependency Order**:
-    1.  `mysql`, `redis`, `rabbitmq`, `discovery-server` (Base Infra)
-    2.  `auth-service`, `order-service`, `gateway-service` (Depend on Infra)
-    3.  `envoy` (Depends on Gateway)
-
-### 5.2 Adding a New Microservice
-1.  Add module in `backend-services/pom.xml`.
-2.  Add `spring-cloud-starter-netflix-eureka-client` dependency.
-3.  Annotate Main class with `@EnableDiscoveryClient`.
-4.  Add entry in `gateway-service` `application.yml` routes.
-5.  Add service to `docker-compose.yml`.
-
-### 5.3 Adding a New Micro-frontend
-1.  Create Vue app using `npm create vite@latest`.
-2.  Configure `vite.config.js` with `federation` plugin:
-    -   `name`: Unique remote name.
-    -   `exposes`: List components to share.
-3.  In **Host App** `vite.config.js`:
-    -   Add remote entry to `remotes` object.
-    -   Define a Route in `router/index.js` to load the remote component.
-
----
-
-## 6. API Catalog
-
-### 6.1 Auth Service (`/api/auth`)
-| Method | Endpoint | Access | Description |
-| :--- | :--- | :--- | :--- |
-| `POST` | `/login` | Public | Authenticates user (RSA encrypted password), returns JWT + Roles. |
-| `GET` | `/publicKey` | Public | Returns the RSA Public Key for frontend encryption. |
-
-### 6.2 Order Service (`/api/orders`)
-| Method | Endpoint | Access | Description |
-| :--- | :--- | :--- | :--- |
-| `POST` | `/create` | Authenticated | Creates a new order with items. Publishes event to RabbitMQ. |
-| `GET` | `/my` | Authenticated | Retrieves order history for the current logged-in user. |
-| `GET` | `/admin/all` | **Admin** | Retrieves all orders in the system. |
-| `PATCH` | `/{id}/status` | **Admin** | Updates order status (e.g., `PAID` -> `PREPARING` -> `COMPLETED`). |
-
-### 6.3 Admin Capabilities
--   **Dashboard**: Accessed via `/admin` (Front) and `/api/orders/admin/all` (Back).
--   **Role Check**: Requires `ROLE_ADMIN` in JWT `roles` list.
-
-### 6.4 Backend Monitoring (Actuator)
-| Method | Endpoint | Access | Description |
-| :--- | :--- | :--- | :--- |
-| `GET` | `/actuator/**` | **Public** | Exposes operational information (Health, Metrics, Env, Loggers) for Spring Boot Admin. |
-| `GET` | `/actuator/prometheus` | **Public** | Exposes metrics in Prometheus format for scraping. |
-
-> **Note**: For `auth-service`, `gateway-service`, `order-service`, and `notification-service`, these endpoints are fully exposed (`*`) to enable deep monitoring. In `auth-service`, this is explicitly permitted in `SecurityConfig`.
-
----
-
-## 7. Release v1.0.0 Status
-
-***(Released: 2025-12-21)***
-
-This section summarizes the concrete implementation details of the first major release.
-
-### 7.1 Completed Features
-1.  **Admin Dashboard (UI/UX)**:
-    -   **Sub-app**: `sub-app-admin` is fully integrated.
-    -   **Design**: Implements a strict "Card Layout" with high contrast (dark text on white cards, gray page background) and padded visual hierarchy.
-    -   **Elements**: Includes visual status badges, quantity pills, and clear separation of layout zones.
-    -   **Fixes**: Solved "white-on-white" text visibility issues by forcing inline styles (`color: #111827`) to override global defaults.
-
-2.  **Role-Based Access Control (RBAC)**:
-    -   **Backend**: `order-service` endpoints (`/admin/all`, `/{id}/status`) are secured with `@PreAuthorize("hasRole('ADMIN')")`.
-    -   **Frontend**: The Host App conditionally renders the "Order Management (Admin)" link based on the JWT `roles` claim.
-
-3.  **Database Authentication (Phase 3)**:
-    -   **Auth Service**: Fully migrated to **MySQL** backend with `BCrypt` password hashing.
-    -   **Seeding**: Automatic data seeding via `data.sql` (packaged in JAR) creates initial `admin` and `customer` users on every startup (idempotent validation).
-    -   **Security**: `SecurityConfig` enforces strict access (only login/publicKey public).
-
-4.  **Messaging Infrastructure**:
-    -   RabbitMQ dependencies (`spring-boot-starter-amqp`) are added to `order-service`.
-    -   Producer logic is in place to publish events on order creation.
-    -   *Pending*: The Consumer side (e.g., `notification-service`) is not yet fully implemented.
-
-### 7.2 Configuration & Deviations
--   **Frontend Styling**: The Admin Dashboard uses inline styles in some places to guarantee contrast correctness against the Host App's CSS bleeding. Future refactoring should move these to a scoped Tailwind config or a dedicated theme file.
-
-### 7.3 Next Steps (Recommended)
-1.  Implement the RabbitMQ Consumer in `notification-service`.
-2.  Refactor `sub-app-admin` CSS to remove inline styles in favor of a robust design system.
-
----
-
-## 8. Frontend Development Standards
-
-To ensure UI consistency and code quality, all frontend modules (Host and Sub-apps) must adhere to the following standards.
-
-### 8.1 UI Library & Design System
--   **Core Library**: **`shadcn-vue`** (Community-led component library).
--   **Styling**: **Tailwind CSS**.
--   **Installation**:
-    1.  Ensure `jsconfig.json` is configured with `"@/*": ["./src/*"]`.
-    2.  Update `vite.config.js` to resolve `@` alias.
-    3.  Run initialization: `npx shadcn-vue@latest init`.
-    4.  Select `New York` style and `Neutral` base color.
-
-### 8.2 Standard Components
-Reuse the following components from `@/components/ui` instead of writing raw HTML/CSS:
--   **Interaction**: `Button` (use variants for hierarchy), `Sheet` (for mobile drawers).
--   **Display**: `Card` (content containers), `Badge` (status/price), `AspectRatio` (images).
--   **Layout**: `ScrollArea` (lists inside cards), `Separator`.
-
-### 8.3 Layout & Responsiveness
--   **Desktop (lg+)**:
-    -   Adopt a **Split Layout**: Main Content (70%) + Sticky Sidebar (30%).
-    -   Use `grid-cols-3` for item listings.
--   **Mobile**:
-    -   Single column layout.
-    -   Off-canvas elements (like Shopping Cart) must use **Sheet** (Bottom or Side).
-    -   Trigger actions via Floating Action Button (FAB) or accessible bottom bar.
--   **Aspect Ratios**: All media (food images) must be wrapped in `AspectRatio` (16:9) to prevent layout shifts.
-
-### 8.4 Theme & Branding
--   **Primary Color**: **Warm Orange-Red** (Food appetite appeal).
-    -   HSL Value: `12 90% 55%`
-    -   Update `src/style.css` `:root` variables:
-        ```css
-        --primary: 12 90% 55%;
-        --primary-foreground: 0 0% 100%;
-        ```
--   **Visual Polish**:
-    -   Cards must have `hover:shadow-lg` and `transition-all` classes.
-    -   Buttons should support `active:scale-95` for tactile feedback.
-
-### 8.5 Checklist for New Modules
-When adding a new frontend sub-app:
-1.  [ ] Initialize `shadcn-vue`.
-2.  [ ] Copy `src/style.css` theme variables from `sub-app-menu`.
-3.  [ ] Install base components: `button`, `card`, `sheet`, `scroll-area`, `separator`, `badge`, `aspect-ratio`.
-4.  [ ] Verify responsive behavior (Desktop Sticky vs Mobile Sheet).
-
----
-
-## 9. Data Persistence & Reliability
-
-### 9.1 Database Persistence Strategy
-To prevent data loss during container restarts (`docker-compose down`), the system uses a **Docker Named Volume**:
--   **Volume Name**: `mysql_data`
--   **Mount Path**: `/var/lib/mysql`
--   **Behavior**: When containers are removed, the database files persist in the Docker volume. This ensures that subsequent restarts do not require re-seeding the database, significantly improving startup time and retaining user data.
--   **Reset**: To explicitly wipe only the database data, run `docker volume rm minirestatuantapp_mysql_data`.
-
-### 9.2 SRE & Disaster Recovery Notes
--   **Data vs. Configuration**:
-    -   **Data (Recoverable)**: MySQL, Redis, RabbitMQ data. If lost, the system can auto-initialize (via `data.sql` inside the container) to a fresh state. We accept data loss in favor of system recoverability.
-    -   **Configuration (Critical)**: Files like `infrastructure/envoy/envoy.yaml`. These are **Single Points of Failure**. If these source files are deleted from the host, containers **will fail to start**.
--   **Recommendation**: maintain strict version control (Git) for all `infrastructure/` configuration files to ensure rapid recovery (Git Pull) in case of accidental deletion.
-
----
-*Generated by Antigravity AI Agent*
-
-## 10. Visual Architecture Diagram
+### 2.1 Traffic Flow Topology
+The network topology implements a "Defense in Depth" strategy with three distinct zones.
 
 ```mermaid
 graph TD
     %% Frontend Layer
-    subgraph Client_Side [Client Side / Browser]
+    subgraph Client_Side ["Client Side / Browser"]
         Host["Host App (Shell)"]
         Menu["Sub-app: Menu"]
         Admin["Sub-app: Admin"]
@@ -289,16 +33,16 @@ graph TD
     end
 
     %% Edge Layer
-    subgraph DMZ [Public Zone]
+    subgraph DMZ ["Public Zone (DMZ)"]
         Envoy["Envoy Proxy :8080"]
     end
 
     %% Backend Layer
-    subgraph Internal_Zone [Internal Trust Zone]
+    subgraph Internal_Zone ["Internal Trust Zone"]
         Gateway["Spring Cloud Gateway :8080"]
         Eureka["Eureka Registry :8761"]
         
-        subgraph Services [Microservices]
+        subgraph Services ["Microservices"]
             Auth["Auth Service"]
             Order["Order Service"]
             Notif["Notification Service"]
@@ -306,28 +50,28 @@ graph TD
     end
 
     %% Data Layer
-    subgraph Data_Layer [Data Persistence & Messaging]
+    subgraph Data_Layer ["Data Persistence & Messaging"]
         MySQL[("MySQL :3307")]
         Redis[("Redis")]
         RabbitMQ(("RabbitMQ"))
     end
 
     %% Connections
-    Client_Side -->|"HTTPS/WSS"| Envoy
-    Envoy -->|"Route /auth, /orders"| Gateway
-    Gateway -->|LB| Auth
-    Gateway -->|LB| Order
+    Client_Side -->|"1. HTTPS/WSS"| Envoy
+    Envoy -->|"2. Route /auth, /api"| Gateway
+    Gateway -->|"3. Load Balance"| Auth
+    Gateway -->|"3. Load Balance"| Order
     
     Auth -->|"Read/Write"| MySQL
-    Auth -->|Cache| Redis
+    Auth -->|"Cache Token"| Redis
     
     Order -->|"Read/Write"| MySQL
-    Order -->|"Publish Events"| RabbitMQ
+    Order -->|"4. Publish Events"| RabbitMQ
     
-    RabbitMQ -->|Consume| Notif
+    RabbitMQ -->|"5. Consume"| Notif
     
     %% Service Discovery
-    Services -.->|Register| Eureka
+    Services -.->|"Register Heartbeat"| Eureka
 
     %% Styling
     classDef client fill:#e1f5fe,stroke:#01579b,stroke-width:2px;
@@ -340,3 +84,164 @@ graph TD
     class Gateway,Eureka,Auth,Order,Notif internal;
     class MySQL,Redis,RabbitMQ data;
 ```
+
+### 2.2 Component Roles
+-   **Envoy Proxy**: Edge entry point, TLS termination (planned).
+-   **Spring Cloud Gateway**: Internal routing, JWT validation interceptor, Request logging.
+-   **Eureka**: Service Registry for dynamic service discovery.
+-   **Microservices**: Domain-specific logic containers (Auth, Order, Notification).
+
+---
+
+## 3. Data Design & Schema (ERD)
+
+The system uses **MySQL 8.0** for relational data persistence. The schema is distributed across service-specific logical databases (e.g., `auth_db`, `order_db`) but depicted here in a unified view.
+
+### 3.1 Entity Relationship Diagram
+
+```mermaid
+erDiagram
+    %% Auth Service Context
+    USER ||--o{ USER_ROLES : "has"
+    ROLE ||--o{ USER_ROLES : "assigned to"
+
+    USER {
+        Long id PK
+        String username "Unique, Not Null"
+        String password "BCrypt Encrypted"
+        Boolean enabled
+    }
+
+    ROLE {
+        Long id PK
+        String name "Unique (e.g., ROLE_ADMIN)"
+    }
+
+    USER_ROLES {
+        Long user_id FK
+        Long role_id FK
+    }
+
+    %% Order Service Context
+    ORDER ||--o{ ORDER_ITEM : "contains"
+    MENU ||--o{ ORDER_ITEM : "referenced by"
+
+    ORDER {
+        Long id PK
+        String user_id "From JWT Subject"
+        Decimal total_price
+        String status "PENDING, COMPLETED"
+        DateTime created_at
+    }
+
+    ORDER_ITEM {
+        Long id PK
+        Long order_id FK
+        Long menu_id FK
+        String snapshot_name "Preserved Name"
+        Decimal snapshot_price "Preserved Price"
+        Integer quantity
+    }
+
+    MENU {
+        Long id PK
+        String name
+        Decimal price
+        String description
+        String image_url
+    }
+```
+
+### 3.2 Design Patterns
+-   **Snapshot Pattern**: `ORDER_ITEM` stores `snapshot_name` and `snapshot_price` at the time of purchase. This prevents historical orders from changing if the `MENU` item is updated later.
+-   **Loose Coupling**: `ORDER` table links to `USER` via a string `user_id` (from JWT), not a database Foreign Key. This ensures microservice independence.
+
+---
+
+## 4. Security Architecture
+
+### 4.1 Authentication Pipeline (RSA + BCrypt)
+A robust "Encryption in Transit" mechanism is used for login.
+
+1.  **Public Key Fetch**: Client `GET /auth/public-key`.
+2.  **Encryption**: Client encrypts password using RSA (`JSEncrypt`).
+3.  **Transmission**: Encrypted payload sent to `POST /auth/login`.
+4.  **Decryption**: Backend decrypts using stored Private Key.
+5.  **Verification**: Decrypted password is verified against `BCrypt` hash in DB.
+
+### 4.2 Authorization (JWT + RBAC)
+-   **Token Format**: Standard JWT (HS256).
+-   **Claims**: `sub` (username), `roles` (["ROLE_ADMIN", ...]), `exp`.
+-   **Enforcement**:
+    -   **Gateway**: Validates signature.
+    -   **Service Layer**: `@PreAuthorize("hasRole('ADMIN')")` secures specific endpoints.
+
+---
+
+## 5. Micro-Frontends (Module Federation)
+
+We use **Vite Plugin Federation** to compose the UI at runtime.
+
+| App Name | Type | Mount Point | Responsibility |
+| :--- | :--- | :--- | :--- |
+| **Host App** | Shell | `/` | Layout, Routing, Auth State (Pinia) |
+| **Menu App** | Remote | `/` | Food Menu, Shopping Cart |
+| **Admin App** | Remote | `/admin` | Dashboard, Order Management |
+
+**Constraint**: Remote apps must be built and served in `preview` mode (`npm run preview`) to expose `remoteEntry.js` correctly during local development.
+
+---
+
+## 6. Technology Stack
+
+| Layer | Technology | Details |
+| :--- | :--- | :--- |
+| **Backend** | Java 17 | Core Language |
+| | Spring Boot 3.2 | Application Framework |
+| | Spring Cloud 2023 | Gateway, Eureka, OpenFeign |
+| | RabbitMQ | Async Messaging |
+| | MySQL 8.0 | Primary Database |
+| | Redis | Caching & User Sessions |
+| **Frontend** | Vue 3.5 | Composition API |
+| | Vite 7.2 | Build Tool & Dev Server |
+| | Tailwind CSS 3.4 | Utility-first Styling |
+| | Pinia | State Management |
+
+---
+
+## 7. API Catalog (Key Endpoints)
+
+### 7.1 Auth Service (`/api/auth`)
+-   `POST /login`: Authenticate user.
+-   `POST /register`: Create new account.
+-   `GET /public-key`: Retrieve RSA key for encryption.
+
+### 7.2 Order Service (`/api/orders`)
+-   `POST /create`: Place a new order (Triggers RabbitMQ event).
+-   `GET /my`: Get current user's history.
+-   `GET /admin/all`: **[Admin]** List all system orders.
+-   `PATCH /{id}/status`: **[Admin]** Update order status.
+
+---
+
+## 8. Deployment & Development
+
+### 8.1 Docker Environment
+-   **Start**: `docker-compose up --build -d`
+-   **Services**: `mysql`, `redis`, `rabbitmq`, `registry`, `gateway`, `auth`, `order`, `envoy`.
+-   **Data Persistence**: Named volume `mysql_data` persists DB state.
+
+### 8.2 Adding New Features
+1.  **Backend**: Add module -> Update `pom.xml` -> Register with Eureka.
+2.  **Frontend**: Create Vue App -> Configure `vite.config.js` (Federation) -> Update Host Router.
+
+---
+
+## 9. Current Implementation Status (v1.1)
+
+-   **Admin UI**: Complete. card-based layout with high contrast.
+-   **Auth**: Complete. MySQL-backed, RSA-secured.
+-   **Order**: Core flow complete. RabbitMQ Producer implemented.
+-   **WIP**: Notification Service (Consumer), Menu Management (CRUD).
+
+---
