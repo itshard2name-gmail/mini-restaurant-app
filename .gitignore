@@ -1,0 +1,32 @@
+# Secrets & Keys
+.env
+.env.*
+! .env.example
+*.pem
+*.key
+*.p12
+*.jks
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+
+# OS & IDE
+.DS_Store
+.idea/
+.vscode/
+*.swp
+
+# Backend (Java/Maven)
+target/
+*.class
+
+# Frontend (Node/JS)
+node_modules/
+dist/
+build/
+.output/
+
+# Docker
+docker-compose.override.yml

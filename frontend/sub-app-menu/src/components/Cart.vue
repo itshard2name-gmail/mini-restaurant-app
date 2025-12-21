@@ -1,0 +1,119 @@
+<script setup>
+import { ref } from 'vue';
+import { useCartStore } from '../stores/cart';
+import { storeToRefs } from 'pinia';
+import axios from 'axios';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Separator } from '@/components/ui/separator';
+import { Button } from '@/components/ui/button';
+import { Card, CardHeader, CardTitle, CardContent, CardFooter } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+
+const cartStore = useCartStore();
+const { cartItems, totalPrice, totalQuantity } = storeToRefs(cartStore);
+const { clearCart } = cartStore;
+
+const loading = ref(false);
+const successMessage = ref('');
+const errorMessage = ref('');
+
+const submitOrder = async () => {
+    loading.value = true;
+    successMessage.value = '';
+    errorMessage.value = '';
+
+    const token = localStorage.getItem('token');
+    let userId = 'admin';
+    if (token) {
+        try {
+            const payload = JSON.parse(atob(token.split('.')[1]));
+            userId = payload.sub || 'admin';
+        } catch (e) { }
+    }
+
+    const orderItems = cartItems.value.map(item => ({
+        menuId: item.menuId,
+        quantity: item.quantity
+    }));
+
+    if (orderItems.length === 0) {
+        errorMessage.value = "Cart is empty.";
+        loading.value = false;
+        return;
+    }
+
+    try {
+        await axios.post('/api/orders', { items: orderItems }, {
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'X-User-Id': userId
+            }
+        });
+        successMessage.value = 'Order submitted successfully!';
+        clearCart();
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    } catch (error) {
+        console.error('Order failed:', error);
+        errorMessage.value = 'Failed to submit order.';
+    } finally {
+        loading.value = false;
+    }
+};
+</script>
+
+<template>
+    <Card class="h-full flex flex-col border-0 shadow-none">
+        <CardHeader class="pb-3">
+            <CardTitle class="flex justify-between items-center text-xl">
+                Shopping Cart
+                <Badge variant="secondary" class="bg-primary/10 text-primary hover:bg-primary/20">
+                    {{ totalQuantity }} items
+                </Badge>
+            </CardTitle>
+        </CardHeader>
+        
+        <CardContent class="flex-grow overflow-hidden p-0">
+            <div v-if="successMessage" class="mx-6 mb-4 p-3 bg-green-50 text-green-700 rounded text-sm">
+                {{ successMessage }}
+            </div>
+            <div v-if="errorMessage" class="mx-6 mb-4 p-3 bg-red-50 text-red-700 rounded text-sm">
+                {{ errorMessage }}
+            </div>
+
+            <ScrollArea class="h-[calc(100vh-250px)] px-6">
+                <div v-if="cartItems.length === 0" class="text-muted-foreground text-center py-10">
+                    Your cart is empty.
+                </div>
+                <div v-else class="space-y-4">
+                    <div v-for="(item, index) in cartItems" :key="item.menuId">
+                        <div class="flex justify-between items-center py-2">
+                            <div class="space-y-1">
+                                <p class="font-medium leading-none">{{ item.name }}</p>
+                                <p class="text-xs text-muted-foreground">Qty: {{ item.quantity }}</p>
+                            </div>
+                            <div class="font-semibold">
+                                ${{ (item.price * item.quantity).toFixed(2) }}
+                            </div>
+                        </div>
+                        <Separator v-if="index < cartItems.length - 1" />
+                    </div>
+                </div>
+            </ScrollArea>
+        </CardContent>
+
+        <CardFooter class="flex-col gap-4 border-t pt-6">
+            <div class="flex justify-between items-center w-full text-lg font-bold">
+                <span>Total</span>
+                <span class="text-primary">${{ totalPrice.toFixed(2) }}</span>
+            </div>
+            <Button 
+                class="w-full text-lg h-12" 
+                :disabled="loading || cartItems.length === 0" 
+                @click="submitOrder"
+            >
+                <span v-if="loading" class="mr-2 animate-spin">⟳</span>
+                {{ loading ? 'Processing...' : 'Checkout' }}
+            </Button>
+        </CardFooter>
+    </Card>
+</template>

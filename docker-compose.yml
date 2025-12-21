@@ -1,0 +1,116 @@
+version: '3.8'
+
+services:
+  registry-server:
+    build:
+      context: ./backend-services
+      dockerfile: registry-server/Dockerfile
+    ports:
+      - "8761:8761"
+    container_name: registry-server
+
+  gateway-service:
+    build:
+      context: ./backend-services
+      dockerfile: gateway-service/Dockerfile
+    ports:
+      - "8088:8080"
+    container_name: gateway-service
+    depends_on:
+      - registry-server
+    environment:
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://registry-server:8761/eureka/
+
+  auth-service:
+    build:
+      context: ./backend-services
+      dockerfile: auth-service/Dockerfile
+    container_name: auth-service
+    depends_on:
+      - registry-server
+      - redis
+    environment:
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://registry-server:8761/eureka/
+      - SPRING_DATA_REDIS_HOST=redis
+      - JWT_SECRET=${JWT_SECRET}
+      # RSA_PRIVATE_KEY_PATH defaults to classpath:private_key.pem inside the container, 
+      # which is baked in. If you want to override, uncomment below and mount file.
+      # - RSA_PRIVATE_KEY_PATH=/app/custom_keys/private_key.pem
+
+  order-service:
+    build:
+      context: ./backend-services
+      dockerfile: order-service/Dockerfile
+    container_name: order-service
+    depends_on:
+      - registry-server
+      - mysql
+    environment:
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://registry-server:8761/eureka/
+      - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD}
+      - SPRING_RABBITMQ_HOST=rabbitmq
+      - SPRING_RABBITMQ_PORT=5672
+      - SPRING_RABBITMQ_USERNAME=guest
+      - SPRING_RABBITMQ_PASSWORD=guest
+      - JWT_SECRET=${JWT_SECRET}
+
+  envoy:
+    image: envoyproxy/envoy:v1.28-latest
+    ports:
+      - "80:80"
+      - "9901:9901"
+    volumes:
+      - ./infrastructure/envoy/envoy.yaml:/etc/envoy/envoy.yaml
+    depends_on:
+      - gateway-service
+
+  mysql:
+    image: mysql:8.0
+    ports:
+      - "3307:3306"
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+    volumes:
+      - ./infrastructure/mysql/init:/docker-entrypoint-initdb.d
+    command: --default-authentication-plugin=mysql_native_password
+
+  redis:
+    image: redis:latest
+    ports:
+      - "6379:6379"
+
+  rabbitmq:
+    image: rabbitmq:3.12-management
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    environment:
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
+
+  notification-service:
+    build:
+      context: ./backend-services
+      dockerfile: notification-service/Dockerfile
+    container_name: notification-service
+    depends_on:
+      - registry-server
+      - rabbitmq
+    environment:
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://registry-server:8761/eureka/
+      - SPRING_RABBITMQ_HOST=rabbitmq
+      - SPRING_RABBITMQ_PORT=5672
+      - SPRING_RABBITMQ_USERNAME=guest
+      - SPRING_RABBITMQ_PASSWORD=guest
+
+  admin-server:
+    build:
+      context: ./backend-services
+      dockerfile: admin-server/Dockerfile
+    container_name: admin-server
+    ports:
+      - "9090:9090"
+    depends_on:
+      - registry-server
+    environment:
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://registry-server:8761/eureka/
