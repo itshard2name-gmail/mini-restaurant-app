@@ -18,15 +18,27 @@ Welcome to the Mini Restaurant App! This platform demonstrates a robust, modern 
 - **Secure Checkout**: Seamless order placement process with instant feedback.
 - **Order History**: Track your past orders and their processing status (Pending, preparing, etc.).
 
+> ![Login Page](docs/manual-screenshots/login_page.png)
+> *Secure Login Page*
+
+> ![Customer Menu](docs/manual-screenshots/customer_menu.png)
+> *Interactive Menu with Cart integration*
+
 #### 🛡️ Admin Dashboard (Management View)
 - **RBAC Security**: Role-Based Access Control ensuring only authorized personnel access sensitive data.
 - **Menu Management**: (Coming soon) Interface to create, update, and delete menu items.
 - **Order Monitoring**: (Coming soon) Real-time view of incoming orders to streamline kitchen operations.
 
+> ![Admin Dashboard](docs/manual-screenshots/admin_dashboard.png)
+> *Admin Dashboard for order management*
+
 #### 📊 Backend Monitoring (DevOps View)
 - **Centralized Dashboard**: A powerful **Spring Boot Admin** interface to monitor the health of all microservices.
 - **Real-Time Metrics**: Track CPU usage, Memory (Heap/Non-Heap), Thread states, and HTTP request throughput.
 - **Service Discovery**: Visual confirmation of all active services (Auth, Order, Gateway, Notification) via Eureka.
+
+> ![Spring Boot Admin](docs/manual-screenshots/backend_monitoring.png)
+> *Live System Monitoring*
 
 ---
 
@@ -77,7 +89,7 @@ cd frontend/sub-app-admin && npm run preview
 ```
 > **CRITICAL**: Sub-apps (Menu, Admin) **MUST** be run in `preview` mode (after `npm run build`). Running them in `dev` mode will fail to generate/serve `remoteEntry.js`, preventing the Host App from loading module federation remotes.
 
-Access the app at: **http://localhost:5000**
+Access the app at: **http://localhost:3000**
 
 ## 4. User Manual (Getting Started)
 
@@ -92,7 +104,7 @@ The system comes with pre-seeded accounts (see `auth-service/src/main/resources/
 | **Customer** | `customer` | `123456` | Access to Storefront, Cart, and Order History. |
 
 ### 4.2 Customer Journey (Storefront)
-1.  **Login**: Go to `http://localhost:5000`. You will be redirected to `/login`. Use the **Customer** credentials.
+1.  **Login**: Go to `http://localhost:3000`. You will be redirected to `/login`. Use the **Customer** credentials.
 2.  **Browse Menu**: You will see the "Menu" page with available food items.
 3.  **Add to Cart**: Click "Add to Cart" on any item. A notification will confirm the action.
 4.  **Checkout**:
