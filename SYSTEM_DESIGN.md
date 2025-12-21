@@ -281,48 +281,48 @@ To prevent data loss during container restarts (`docker-compose down`), the syst
 graph TD
     %% Frontend Layer
     subgraph Client_Side [Client Side / Browser]
-        Host[Host App (Shell)]
-        Menu[Sub-app: Menu]
-        Admin[Sub-app: Admin]
+        Host["Host App (Shell)"]
+        Menu["Sub-app: Menu"]
+        Admin["Sub-app: Admin"]
         Host -->|Loads| Menu
         Host -->|Loads| Admin
     end
 
     %% Edge Layer
     subgraph DMZ [Public Zone]
-        Envoy[Envoy Proxy :8080]
+        Envoy["Envoy Proxy :8080"]
     end
 
     %% Backend Layer
     subgraph Internal_Zone [Internal Trust Zone]
-        Gateway[Spring Cloud Gateway :8080]
-        Eureka[Eureka Registry :8761]
+        Gateway["Spring Cloud Gateway :8080"]
+        Eureka["Eureka Registry :8761"]
         
         subgraph Services [Microservices]
-            Auth[Auth Service]
-            Order[Order Service]
-            Notif[Notification Service]
+            Auth["Auth Service"]
+            Order["Order Service"]
+            Notif["Notification Service"]
         end
     end
 
     %% Data Layer
     subgraph Data_Layer [Data Persistence & Messaging]
-        MySQL[(MySQL :3307)]
-        Redis[(Redis)]
-        RabbitMQ((RabbitMQ))
+        MySQL[("MySQL :3307")]
+        Redis[("Redis")]
+        RabbitMQ(("RabbitMQ"))
     end
 
     %% Connections
-    Client_Side -->|HTTPS/WSS| Envoy
-    Envoy -->|Route /auth, /orders| Gateway
+    Client_Side -->|"HTTPS/WSS"| Envoy
+    Envoy -->|"Route /auth, /orders"| Gateway
     Gateway -->|LB| Auth
     Gateway -->|LB| Order
     
-    Auth -->|Read/Write| MySQL
+    Auth -->|"Read/Write"| MySQL
     Auth -->|Cache| Redis
     
-    Order -->|Read/Write| MySQL
-    Order -->|Publish Events| RabbitMQ
+    Order -->|"Read/Write"| MySQL
+    Order -->|"Publish Events"| RabbitMQ
     
     RabbitMQ -->|Consume| Notif
     
