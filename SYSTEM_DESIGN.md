@@ -11,6 +11,7 @@
 The **Mini Restaurant App** is a scalable, cloud-native e-commerce platform designed to demonstrate modern software architecture. It facilitates:
 1.  **Customer Operations**: Browsing menus, managing carts, and placing orders.
 2.  **Admin Operations**: Order management and Dashboard monitoring.
+3.  **Action**: Sends an email/SMS or pushes a WebSocket update to the admin dashboard.
 
 The system is built on a **Microservices** backend (Spring Cloud) and a **Micro-frontend** client (Vue 3 Module Federation), emphasizing separation of concerns, scalability, and security.
 
@@ -93,7 +94,7 @@ graph TD
 
 ---
 
-## 3. Data Design & Schema (ERD)
+## 3. Data & Business Logic
 
 The system uses **MySQL 8.0** for relational data persistence. The schema is distributed across service-specific logical databases (e.g., `auth_db`, `order_db`) but depicted here in a unified view.
 
@@ -155,6 +156,69 @@ erDiagram
 ### 3.2 Design Patterns
 -   **Snapshot Pattern**: `ORDER_ITEM` stores `snapshot_name` and `snapshot_price` at the time of purchase. This prevents historical orders from changing if the `MENU` item is updated later.
 -   **Loose Coupling**: `ORDER` table links to `USER` via a string `user_id` (from JWT), not a database Foreign Key. This ensures microservice independence.
+
+### 3.3 Order Lifecycle Sequence
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor User as User (Customer)
+    participant FE as Sub-app-Menu
+    participant Envoy as Envoy Proxy
+    participant GW as Gateway Service
+    participant Auth as Auth Service (JWT)
+    participant Order as Order Service
+    participant DB as MySQL DB
+    participant MQ as RabbitMQ
+    participant Notif as Notification Service
+
+    %% Phase 1: Authentication
+    note over User, Auth: Prerequisite: User Login (RSA Encrypted Password)
+    User->>FE: Enter Credentials
+    FE->>FE: Encrypt Password (RSA Public Key)
+    FE->>Auth: POST /auth/login {user, enc_pass}
+    Auth->>DB: Verify Hash (BCrypt)
+    Auth-->>FE: Return JWT Token (in Response Body)
+
+    %% Phase 2: Order Creation
+    note over User, Notif: Main Flow: Place Order
+    User->>FE: Click "Checkout"
+    FE->>Envoy: POST /api/orders
+    Note right of FE: Header: Authorization: Bearer {JWT}
+    Note right of FE: Header: X-User-Id: {userId}
+    
+    Envoy->>GW: Forward Request
+    GW->>Order: Route to Order Service
+    
+    rect rgb(30, 30, 30)
+        note right of GW: Security Context
+        Order->>Order: JwtAuthenticationFilter: Validate Signature
+        Order->>Order: Extract Roles & UserID
+    end
+
+    Order->>DB: Fetch "Menu" Items
+    
+    %% Snapshot Logic
+    rect rgb(50, 50, 50)
+        note right of Order: Data Integrity (Snapshot)
+        Order->>Order: Create Order Entity
+        loop For each Item
+            Order->>Order: Copy Name & Price to OrderItem
+        end
+        Order->>DB: SAVE Order (Commit)
+    end
+    
+    %% Messaging
+    Order->>MQ: Publish to "order.exchange"
+    Note right of Order: Routing Key: "order.create"
+    Order-->>FE: 200 OK (Order JSON)
+    FE-->>User: Show "Order Success"
+
+    %% Phase 3: Notification
+    MQ->>Notif: Consume Message
+    Notif->>Notif: Log / Push WebSocket
+    note right of Notif: "New Order #123 Received"
+```
 
 ---
 

@@ -93,7 +93,7 @@ graph TD
 
 ---
 
-## 3. 資料設計與 Schema (ERD)
+## 3. 資料與業務邏輯 (Data & Business Logic)
 
 系統使用 **MySQL 8.0** 作為關聯式資料持久層。Schema 雖然分散在各個服務的邏輯資料庫中 (如 `auth_db`, `order_db`)，但在此處以統一視圖呈現。
 
@@ -155,6 +155,69 @@ erDiagram
 ### 3.2 設計模式 (Design Patterns)
 -   **Snapshot Pattern**: `ORDER_ITEM` 在購買當下儲存 `snapshot_name` 與 `snapshot_price`。這能防止若後續 `MENU` 項目更新時，歷史訂單的資料發生變動。
 -   **Loose Coupling (鬆散耦合)**: `ORDER` 資料表透過字串 `user_id` (來自 JWT) 連結至 `USER`，而非資料庫 Foreign Key。這確保了 Microservice 間的獨立性。
+
+### 3.3 訂單生命週期時序圖 (Order Lifecycle Sequence)
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor User as User (Customer)
+    participant FE as Sub-app-Menu
+    participant Envoy as Envoy Proxy
+    participant GW as Gateway Service
+    participant Auth as Auth Service (JWT)
+    participant Order as Order Service
+    participant DB as MySQL DB
+    participant MQ as RabbitMQ
+    participant Notif as Notification Service
+
+    %% Phase 1: Authentication
+    note over User, Auth: Prerequisite: User Login (RSA Encrypted Password)
+    User->>FE: Enter Credentials
+    FE->>FE: Encrypt Password (RSA Public Key)
+    FE->>Auth: POST /auth/login {user, enc_pass}
+    Auth->>DB: Verify Hash (BCrypt)
+    Auth-->>FE: Return JWT Token (in Response Body)
+
+    %% Phase 2: Order Creation
+    note over User, Notif: Main Flow: Place Order
+    User->>FE: Click "Checkout"
+    FE->>Envoy: POST /api/orders
+    Note right of FE: Header: Authorization: Bearer {JWT}
+    Note right of FE: Header: X-User-Id: {userId}
+    
+    Envoy->>GW: Forward Request
+    GW->>Order: Route to Order Service
+    
+    rect rgb(30, 30, 30)
+        note right of GW: Security Context
+        Order->>Order: JwtAuthenticationFilter: Validate Signature
+        Order->>Order: Extract Roles & UserID
+    end
+
+    Order->>DB: Fetch "Menu" Items
+    
+    %% Snapshot Logic
+    rect rgb(50, 50, 50)
+        note right of Order: Data Integrity (Snapshot)
+        Order->>Order: Create Order Entity
+        loop For each Item
+            Order->>Order: Copy Name & Price to OrderItem
+        end
+        Order->>DB: SAVE Order (Commit)
+    end
+    
+    %% Messaging
+    Order->>MQ: Publish to "order.exchange"
+    Note right of Order: Routing Key: "order.create"
+    Order-->>FE: 200 OK (Order JSON)
+    FE-->>User: Show "Order Success"
+
+    %% Phase 3: Notification
+    MQ->>Notif: Consume Message
+    Notif->>Notif: Log / Push WebSocket
+    note right of Notif: "New Order #123 Received"
+```
 
 ---
 
