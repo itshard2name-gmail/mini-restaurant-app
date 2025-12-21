@@ -25,6 +25,25 @@ public class OrderController {
         return ResponseEntity.ok(orderService.getAllMenus());
     }
 
+    @PostMapping("/menus")
+    @org.springframework.security.access.prepost.PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<Menu> createMenu(@RequestBody Menu menu) {
+        return ResponseEntity.ok(orderService.createMenu(menu));
+    }
+
+    @PutMapping("/menus/{id}")
+    @org.springframework.security.access.prepost.PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<Menu> updateMenu(@PathVariable Long id, @RequestBody Menu menu) {
+        return ResponseEntity.ok(orderService.updateMenu(id, menu));
+    }
+
+    @DeleteMapping("/menus/{id}")
+    @org.springframework.security.access.prepost.PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<Void> deleteMenu(@PathVariable Long id) {
+        orderService.deleteMenu(id);
+        return ResponseEntity.ok().build();
+    }
+
     @PostMapping
     @org.springframework.security.access.prepost.PreAuthorize("hasRole('USER')")
     public ResponseEntity<Order> createOrder(@RequestHeader("X-User-Id") String userId,

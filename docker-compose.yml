@@ -72,6 +72,7 @@ services:
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
     volumes:
       - ./infrastructure/mysql/init:/docker-entrypoint-initdb.d
+      - mysql_data:/var/lib/mysql
     command: --default-authentication-plugin=mysql_native_password
 
   redis:
@@ -114,3 +115,6 @@ services:
       - registry-server
     environment:
       - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://registry-server:8761/eureka/
+
+volumes:
+  mysql_data:

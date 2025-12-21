@@ -114,4 +114,29 @@ public class OrderService {
             System.err.println("Failed to send RabbitMQ message: " + e.getMessage());
         }
     }
+
+    @Transactional
+    public Menu createMenu(Menu menu) {
+        return menuRepository.save(menu);
+    }
+
+    @Transactional
+    public Menu updateMenu(Long id, Menu menuDetails) {
+        Menu menu = menuRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Menu not found: " + id));
+
+        menu.setName(menuDetails.getName());
+        menu.setPrice(menuDetails.getPrice());
+        menu.setDescription(menuDetails.getDescription());
+        menu.setImageUrl(menuDetails.getImageUrl());
+
+        return menuRepository.save(menu);
+    }
+
+    @Transactional
+    public void deleteMenu(Long id) {
+        Menu menu = menuRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Menu not found: " + id));
+        menuRepository.delete(menu);
+    }
 }

@@ -11,7 +11,7 @@ import { Badge } from '@/components/ui/badge';
 
 const cartStore = useCartStore();
 const { cartItems, totalPrice, totalQuantity } = storeToRefs(cartStore);
-const { clearCart } = cartStore;
+const { addToCart, minusItem, removeItem, clearCart } = cartStore;
 
 const loading = ref(false);
 const successMessage = ref('');
@@ -86,13 +86,39 @@ const submitOrder = async () => {
                 </div>
                 <div v-else class="space-y-4">
                     <div v-for="(item, index) in cartItems" :key="item.menuId">
-                        <div class="flex justify-between items-center py-2">
-                            <div class="space-y-1">
-                                <p class="font-medium leading-none">{{ item.name }}</p>
-                                <p class="text-xs text-muted-foreground">Qty: {{ item.quantity }}</p>
+                        <div class="flex flex-col gap-2 py-3">
+                            <div class="flex justify-between items-start">
+                                <div>
+                                    <p class="font-medium leading-none">{{ item.name }}</p>
+                                    <p class="text-xs text-muted-foreground mt-1">Unit: ${{ item.price }}</p>
+                                </div>
+                                <div class="font-semibold">
+                                    ${{ (item.price * item.quantity).toFixed(2) }}
+                                </div>
                             </div>
-                            <div class="font-semibold">
-                                ${{ (item.price * item.quantity).toFixed(2) }}
+                            
+                            <div class="flex justify-between items-center mt-2">
+                                <div class="flex items-center gap-3 bg-secondary/20 rounded-lg p-1">
+                                    <button 
+                                        @click="minusItem({ id: item.menuId })"
+                                        class="w-6 h-6 flex items-center justify-center rounded-md hover:bg-white shadow-sm transition-all text-sm font-bold disabled:opacity-50"
+                                    >
+                                        −
+                                    </button>
+                                    <span class="text-sm font-medium w-4 text-center">{{ item.quantity }}</span>
+                                    <button 
+                                        @click="addToCart({ id: item.menuId })"
+                                        class="w-6 h-6 flex items-center justify-center rounded-md hover:bg-white shadow-sm transition-all text-sm font-bold"
+                                    >
+                                        +
+                                    </button>
+                                </div>
+                                <button 
+                                    @click="removeItem({ id: item.menuId })"
+                                    class="text-xs text-red-500 hover:text-red-700 hover:underline px-2"
+                                >
+                                    Remove
+                                </button>
                             </div>
                         </div>
                         <Separator v-if="index < cartItems.length - 1" />

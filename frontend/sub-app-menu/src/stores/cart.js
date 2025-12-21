@@ -17,6 +17,22 @@ export const useCartStore = defineStore('cart', () => {
         }
     };
 
+    const minusItem = (menu) => {
+        if (items.value[menu.id]) {
+            if (items.value[menu.id].quantity > 1) {
+                items.value[menu.id].quantity--;
+            } else {
+                delete items.value[menu.id];
+            }
+        }
+    };
+
+    const removeItem = (menu) => {
+        if (items.value[menu.id]) {
+            delete items.value[menu.id];
+        }
+    };
+
     const clearCart = () => {
         items.value = {};
     };
@@ -34,6 +50,8 @@ export const useCartStore = defineStore('cart', () => {
     return {
         items,
         addToCart,
+        minusItem,
+        removeItem,
         clearCart,
         cartItems,
         totalPrice,

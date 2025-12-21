@@ -73,6 +73,7 @@ docker-compose up --build -d
 - **MySQL**: Port 3307 (`root`/`root`)
 
 > **Note**: On the first `docker-compose up`, the `auth-service` automatically seeds the database with initial users (`admin`, `customer`) via `import.sql`.
+> **Persistence**: A Docker Named Volume (`mysql_data`) is configured to persist database changes across restarts.
 
 ### 3.2 Frontend (Development)
 The frontend uses **Vite Plugin Federation**. You need to run the host and all sub-apps simultaneously for full functionality.

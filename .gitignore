@@ -30,3 +30,11 @@ build/
 
 # Docker
 docker-compose.override.yml
+34: 
+35: # Database
+36: *.sql
+37: *.sql.gz
+38: *.db
+39: *.sqlite
+40: /data/
+
