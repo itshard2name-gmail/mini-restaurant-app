@@ -212,15 +212,32 @@ We use **Vite Plugin Federation** to compose the UI at runtime.
 ## 7. API Catalog (Key Endpoints)
 
 ### 7.1 Auth Service (`/api/auth`)
--   `POST /login`: Authenticate user.
--   `POST /register`: Create new account.
--   `GET /public-key`: Retrieve RSA key for encryption.
+| Method | Endpoint | Access | Description |
+| :--- | :--- | :--- | :--- |
+| `POST` | `/login` | Public | Authenticates user (RSA encrypted password), returns JWT + Roles. |
+| `POST` | `/register` | Public | Registers new user (RSA encrypted password). |
+| `GET` | `/public-key` | Public | Returns the RSA Public Key for frontend encryption. |
+| `GET` | `/verify` | Public | Validates a JWT token. |
 
 ### 7.2 Order Service (`/api/orders`)
--   `POST /create`: Place a new order (Triggers RabbitMQ event).
--   `GET /my`: Get current user's history.
--   `GET /admin/all`: **[Admin]** List all system orders.
--   `PATCH /{id}/status`: **[Admin]** Update order status.
+| Method | Endpoint | Access | Description |
+| :--- | :--- | :--- | :--- |
+| `POST` | `/create` | Authenticated | Creates a new order with items. Publishes event to RabbitMQ. |
+| `GET` | `/my` | Authenticated | Retrieves order history for the current logged-in user. |
+| `GET` | `/admin/all` | **Admin** | Retrieves all orders in the system. |
+| `PATCH` | `/{id}/status` | **Admin** | Updates order status (e.g., `PAID` -> `PREPARING` -> `COMPLETED`). |
+
+### 7.3 Admin Capabilities
+-   **Dashboard**: Accessed via `/admin` (Front) and `/api/orders/admin/all` (Back).
+-   **Role Check**: Requires `ROLE_ADMIN` in JWT `roles` list.
+
+### 7.4 Backend Monitoring (Actuator)
+| Method | Endpoint | Access | Description |
+| :--- | :--- | :--- | :--- |
+| `GET` | `/actuator/**` | **Public** | Exposes operational information (Health, Metrics, Env, Loggers) for Spring Boot Admin. |
+| `GET` | `/actuator/prometheus` | **Public** | Exposes metrics in Prometheus format for scraping. |
+
+> **Note**: For `auth-service`, `gateway-service`, `order-service`, and `notification-service`, these endpoints are fully exposed (`*`) to enable deep monitoring. In `auth-service`, this is explicitly permitted in `SecurityConfig`.
 
 ---
 
