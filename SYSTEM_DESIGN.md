@@ -74,10 +74,10 @@ graph TD
     Services -.->|"Register Heartbeat"| Eureka
 
     %% Styling
-    classDef client fill:#e1f5fe,stroke:#01579b,stroke-width:2px;
-    classDef dmz fill:#fff3e0,stroke:#e65100,stroke-width:2px;
-    classDef internal fill:#f3e5f5,stroke:#4a148c,stroke-width:2px;
-    classDef data fill:#e8f5e9,stroke:#1b5e20,stroke-width:2px;
+    classDef client fill:#e1f5fe,stroke:#0277bd,stroke-width:2px,color:#000000;
+    classDef dmz fill:#fff3e0,stroke:#ef6c00,stroke-width:2px,color:#000000;
+    classDef internal fill:#f3e5f5,stroke:#7b1fa2,stroke-width:2px,color:#000000;
+    classDef data fill:#e8f5e9,stroke:#2e7d32,stroke-width:2px,color:#000000;
     
     class Host,Menu,Admin client;
     class Envoy dmz;
