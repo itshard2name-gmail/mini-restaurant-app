@@ -79,7 +79,41 @@ cd frontend/sub-app-admin && npm run preview
 
 Access the app at: **http://localhost:5000**
 
-## 4. Key Technical Highlights
+## 4. User Manual (Getting Started)
+
+Once the system is running, follow these steps to explore the features.
+
+### 4.1 Login Credentials
+The system comes with pre-seeded accounts (see `auth-service/src/main/resources/import.sql`).
+
+| Role | Username | Password | Access |
+| :--- | :--- | :--- | :--- |
+| **Administrator** | `admin` | `123456` | Full access to Storefront and Admin Dashboard. |
+| **Customer** | `customer` | `123456` | Access to Storefront, Cart, and Order History. |
+
+### 4.2 Customer Journey (Storefront)
+1.  **Login**: Go to `http://localhost:5000`. You will be redirected to `/login`. Use the **Customer** credentials.
+2.  **Browse Menu**: You will see the "Menu" page with available food items.
+3.  **Add to Cart**: Click "Add to Cart" on any item. A notification will confirm the action.
+4.  **Checkout**:
+    -   Open the Cart (top-right icon or bottom sheet on mobile).
+    -   Review items and total price.
+    -   Click "Checkout".
+5.  **View History**: Go to "My Orders" via the Navbar profile menu to see your `PENDING` orders.
+
+### 4.3 Administrator Journey (Dashboard)
+1.  **Login**: Logout and sign in with the **Administrator** credentials.
+2.  **Access Admin Panel**: Click the "Order Management (Admin)" link in the Navbar (only visible to admins).
+3.  **Manage Orders**:
+    -   View a list of all successful orders.
+    -   (Future) Update status from `PENDING` to `COMPLETED`.
+
+### 4.4 System Monitoring (DevOps)
+-   **Dashboard**: Visit `http://localhost:9090` (Spring Boot Admin).
+-   **Check Health**: Verify that `AUTH-SERVICE`, `ORDER-SERVICE`, etc., are all **UP**.
+-   **View Metrics**: Click on `ORDER-SERVICE` -> **Insights** -> **Metrics** to see real-time graph data.
+
+## 5. Key Technical Highlights
 
 - **Micro-Frontends**: Independent deployment of Menu and Admin interfaces using Module Federation.
 - **Security**:
@@ -93,7 +127,7 @@ Access the app at: **http://localhost:5000**
 - **Resilience**: RabbitMQ for asynchronous, decoupled order processing.
 - **Network**: "Defense in Depth" topology with Envoy Proxy and Spring Cloud Gateway.
 
-## 4. Development Guidelines
+## 6. Development Guidelines
 
 Please refer to [SYSTEM_DESIGN.md](./SYSTEM_DESIGN.md) for:
 - 🛠 **Technology Stack** versions
