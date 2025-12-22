@@ -329,6 +329,11 @@ sequenceDiagram
 
 ## 7. API 目錄 (關鍵 Endpoints)
 
+> **API 文件規格 (Documentation)**: 
+> - **Auth Service**: [http://localhost:8081/swagger-ui.html](http://localhost:8081/swagger-ui.html)
+> - **Order Service**: [http://localhost:8082/swagger-ui.html](http://localhost:8082/swagger-ui.html)
+> - **OpenAPI Specs**: `/v3/api-docs` (位於各服務端口)。
+
 ### 7.1 Auth Service (`/api/auth`)
 | Method | Endpoint | Access | Description |
 | :--- | :--- | :--- | :--- |
