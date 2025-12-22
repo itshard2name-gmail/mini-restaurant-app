@@ -220,6 +220,61 @@ sequenceDiagram
     note right of Notif: "New Order #123 Received"
 ```
 
+### 3.4 Admin Order Management Sequence
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor Admin as Admin User
+    participant FE as Sub-app-Admin
+    participant GW as Gateway / Envoy
+    participant Auth as Auth Service
+    participant Order as Order Service
+    participant DB as MySQL DB
+    participant MQ as RabbitMQ
+    participant Notif as Notification Service
+
+    %% Phase 1: View Active Orders
+    note over Admin, Order: Scenario: Admin Views Dashboard
+    Admin->>FE: Open Dashboard
+    FE->>GW: GET /api/orders/admin/all
+    Note right of FE: Header: Authorization: Bearer {JWT}
+    
+    GW->>Order: Forward Request
+    
+    rect rgb(30,30,30)
+        note right of GW: RBAC Check
+        Order->>Order: Validate JWT
+        Order->>Order: Check Role == ROLE_ADMIN
+        alt is Authorized
+             Order->>DB: Fetch All Orders
+             Order-->>FE: Return List [Order A, Order B...]
+        else is Unauthorized
+             Order-->>FE: 403 Forbidden
+        end
+    end
+
+    %% Phase 2: Update Status
+    note over Admin, Notif: Scenario: Admin Accepts Order
+    Admin->>FE: Click "Accept Order"
+    FE->>GW: PATCH /api/orders/admin/{id}/status {status: PREPARING}
+    GW->>Order: Forward Request
+    
+    Order->>Order: Verify ROLE_ADMIN
+    Order->>DB: Update Status -> PREPARING
+    
+    %% Phase 3: Async Notification
+    Order->>MQ: Publish "order.update"
+    Note right of Order: Routing Key: "order.create" or "order.update"
+    Order-->>FE: 200 OK (Updated Order)
+    FE-->>Admin: Show "Order Accepted" Toast
+
+    %% Phase 4: Notify User
+    MQ->>Notif: Consume Message
+    Notif->>Notif: Push WebSocket Notification
+    note right of Notif: "Your order is being prepared!"
+```
+
 ---
 
 ## 4. Security Architecture

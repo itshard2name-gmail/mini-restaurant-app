@@ -80,6 +80,20 @@ public class OrderController {
         return ResponseEntity.ok(orderService.getMyOrders(userId));
     }
 
+    @GetMapping("/admin/all")
+    @org.springframework.security.access.prepost.PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<List<Order>> getAllOrders() {
+        return ResponseEntity.ok(orderService.getAllOrders());
+    }
+
+    @PatchMapping("/admin/{id}/status")
+    @org.springframework.security.access.prepost.PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<Order> updateOrderStatus(@PathVariable Long id,
+            @RequestBody java.util.Map<String, String> body) {
+        String status = body.get("status");
+        return ResponseEntity.ok(orderService.updateStatus(id, status));
+    }
+
     @PatchMapping("/{id}/pay")
     public ResponseEntity<Order> payOrder(@PathVariable Long id) {
         return ResponseEntity.ok(orderService.payOrder(id));
