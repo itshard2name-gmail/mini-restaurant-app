@@ -330,10 +330,10 @@ We use **Vite Plugin Federation** to compose the UI at runtime.
 
 ## 7. API Catalog (Key Endpoints)
 
-> **API Documentation**: 
-> - **Auth Service**: [http://localhost:8081/swagger-ui.html](http://localhost:8081/swagger-ui.html)
-> - **Order Service**: [http://localhost:8082/swagger-ui.html](http://localhost:8082/swagger-ui.html)
-> - **OpenAPI Specs**: `/v3/api-docs` on respective ports.
+> **API Documentation (Unified Gateway)**: 
+> - **URL**: [http://localhost:8088/webjars/swagger-ui/index.html](http://localhost:8088/webjars/swagger-ui/index.html)
+> - **Usage**: Select "Auth Service" or "Order Service" from the top-right explorer logic.
+> - **OpenAPI Specs**: `/api/auth/v3/api-docs`, `/api/orders/v3/api-docs` (via Gateway).
 
 ### 7.1 Auth Service (`/api/auth`)
 | Method | Endpoint | Access | Description |

@@ -11,6 +11,18 @@ spring:
           enabled: true
           lower-case-service-id: true
       routes:
+        - id: auth_doc_route
+          uri: lb://auth-service
+          predicates:
+            - Path=/doc/auth/**
+          filters:
+            - RewritePath=/doc/auth/(?<segment>.*), /$\{segment}
+        - id: order_doc_route
+          uri: lb://order-service
+          predicates:
+            - Path=/doc/orders/**
+          filters:
+            - RewritePath=/doc/orders/(?<segment>.*), /$\{segment}
         - id: auth_route
           uri: lb://auth-service
           predicates:
@@ -43,3 +55,11 @@ management:
   endpoint:
     health:
       show-details: always
+
+springdoc:
+  swagger-ui:
+    urls:
+      - name: Auth Service
+        url: /doc/auth/v3/api-docs
+      - name: Order Service
+        url: /doc/orders/v3/api-docs

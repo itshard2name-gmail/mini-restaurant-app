@@ -126,6 +126,11 @@ The system comes with pre-seeded accounts (see `auth-service/src/main/resources/
 -   **Check Health**: Verify that `AUTH-SERVICE`, `ORDER-SERVICE`, etc., are all **UP**.
 -   **View Metrics**: Click on `ORDER-SERVICE` -> **Insights** -> **Metrics** to see real-time graph data.
 
+### 4.5 API Documentation (Developers)
+-   **Unified Access**: Gateway aggregates all microservice APIs into a single portal.
+-   **Interactive UI**: Use **Swagger UI** to explore endpoints and test requests directly.
+-   **URL**: `http://localhost:8088/webjars/swagger-ui/index.html` (Select Service: Auth / Order)
+
 ## 5. Key Technical Highlights
 
 - **Micro-Frontends**: Independent deployment of Menu and Admin interfaces using Module Federation.
@@ -137,6 +142,7 @@ The system comes with pre-seeded accounts (see `auth-service/src/main/resources/
 -   **Observability**:
     -   **Actuator & Prometheus**: Full metric exposure (`/actuator/**`) enabled on all services for deep system insights.
     -   **Visual Monitoring**: Integrated Spring Boot Admin for real-time health checks and JVM diagnostics.
+    -   **API Documentation**: Integrated **SpringDoc OpenAPI** with Gateway Aggregation for centralized API exploration.
 - **Resilience**: RabbitMQ for asynchronous, decoupled order processing.
 - **Network**: "Defense in Depth" topology with Envoy Proxy and Spring Cloud Gateway.
 

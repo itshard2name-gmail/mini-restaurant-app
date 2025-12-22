@@ -126,6 +126,11 @@ cd frontend/sub-app-admin && npm run preview
 -   **檢查健康狀態**：確認 `AUTH-SERVICE`, `ORDER-SERVICE` 等皆為 **UP**。
 -   **查看 Metrics**：點擊 `ORDER-SERVICE` -> **Insights** -> **Metrics** 以查看即時圖表數據。
 
+### 4.5 API 文件 (開發者專用)
+-   **統一入口**：Gateway 將所有 Microservice APIs 整合至單一門戶。
+-   **互動式 UI**：使用 **Swagger UI** 直接探索 Endpoints 並測試請求。
+-   **網址**：`http://localhost:8088/webjars/swagger-ui/index.html` (請選擇 Service: Auth / Order)
+
 ## 5. 核心技術亮點 (Key Technical Highlights)
 
 - **Micro-Frontends**：使用 Module Federation 獨立部署 Menu 與 Admin 介面。
@@ -137,6 +142,7 @@ cd frontend/sub-app-admin && npm run preview
 -   **可觀測性 (Observability)**：
     -   **Actuator & Prometheus**：所有服務皆啟用完整的 Metric 暴露 (`/actuator/**`) 以進行深度系統洞察。
     -   **視覺化監控**：整合 Spring Boot Admin 以進行即時健康檢查與 JVM 診斷。
+    -   **API 文件**：整合 **SpringDoc OpenAPI** 與 Gateway Aggregation 實現集中式 API 探索。
 - **韌性 (Resilience)**：RabbitMQ 用於非同步、解耦的訂單處理。
 - **網路**：具備 Envoy Proxy 與 Spring Cloud Gateway 的「縱深防禦」拓撲。
 
