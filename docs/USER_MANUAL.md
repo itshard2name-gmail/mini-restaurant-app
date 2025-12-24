@@ -1,105 +1,97 @@
 # User Manual - Mini Restaurant App
 
-## 1. System Overview (系統概述)
-
-The **Mini Restaurant App** is a next-generation food ordering platform designed to bridge the gap between customers and restaurant management.
-
-### Core Value Proposition
--   **For Customers**: A seamless, modern ordering experience with real-time menu updates and instant feedback.
--   **For Managers**: A powerful administrative dashboard to oversee operations, enforce security, and manage orders efficiently.
--   **For DevOps**: Robust backend monitoring to ensure 99.9% uptime and rapid issue resolution.
+> **Note**: This manual focuses on the end-user experience for **Customers** and **Restaurant Staff**.
+> For technical deployment and architecture details, please refer to [README.md](../README.md).
 
 ---
 
-## 2. Quick Start (快速入門)
+## 1. Introduction
 
-### 2.1 Environment Setup
-Ensure the system is up and running:
-1.  **Backend**: `docker-compose up -d --build` (in project root).
-2.  **Frontend**: Run the Host App and Sub-Apps (Menu, Admin) as specified in the README.
+Welcome to the **Mini Restaurant App**, a modern ordering platform designed for seamless dining experiences.
 
-### 2.2 Portal Access
-| Application | URL | Description |
-| :--- | :--- | :--- |
-| **Storefront** | [http://localhost:3000](http://localhost:3000) | Main customer interface. |
-| **Admin Dashboard** | [http://localhost:3000/admin](http://localhost:3000/admin) | Restricted management area. |
-| **System Monitor** | [http://localhost:9090](http://localhost:9090) | Spring Boot Admin (DevOps). |
-
-### 2.3 Login Credentials
-The system comes pre-loaded with two distinct accounts:
-
-| Role | Username | Password |
-| :--- | :--- | :--- |
-| **Customer** | `customer` | `123456` |
-| **Administrator** | `admin` | `123456` |
-
-> ![Login Page](manual-screenshots/login_page.png)
-> *Secure Login Portal*
+### Key Features
+*   **For Customers**: Order from your phone (Dine-in or Takeout) with real-time status updates.
+*   **For Staff**: A unified dashboard to manage kitchen preparation and counter pickups.
 
 ---
 
-## 3. Feature Guide (功能詳解)
+## 2. Getting Started
 
-### 3.1 Customer Journey
-**Goal**: Place an order for food items.
+### Accessing the App
+*   **Storefront / Admin**: [http://localhost:3000](http://localhost:3000)
 
-1.  **Login**: Use the `customer` account.
-2.  **Browse Menu**: View available items.
+### System Accounts
+For testing or administrative access, use the following credentials:
+
+| Role | Username | Password | Access |
+| :--- | :--- | :--- | :--- |
+| **Administrator** | `admin` | `123456` | Full Admin Dashboard access |
+| **Customer** | *(Mobile Number)* | *(No Password)* | Storefront access (via Quick Login) |
+
+---
+
+## 3. Customer Guide
+
+The app supports two main dining modes: **Takeout** and **Dine-in**.
+
+### 3.1 Scenario A: Takeout (Quick Login)
+Ideal for customers ordering ahead for pickup.
+
+1.  **Select Mode**: Choose **Takeout** on the welcome screen.
+2.  **Browse Menu**: Add items to your cart.
     > ![Customer Menu](manual-screenshots/customer_menu.png)
-    > *Interactive Menu*
-3.  **Add to Cart**: Click "Add to Cart" on your desired items.
+3.  **Checkout**:
+    *   Open the Cart (Floating Button).
+    *   Click **Checkout**.
     > ![Customer Cart](manual-screenshots/customer_cart.png)
-    > *Cart Management*
-4.  **Checkout**: Review your selections in the cart and submit the order.
-5.  **Track Order**: Visit "My Orders" to see status updates.
+4.  **Login**:
+    *   You will be redirected to the Login page.
+    *   Select the **Customer** tab.
+    *   Enter your **Mobile Number** (e.g., `0912345678`).
+    *   Click **Track Order / Quick Login**.
+5.  **Payment**: After logging in, return to the cart to finalize (Pay Now).
 
-### 3.2 Administrator Journey
-**Goal**: Manage restaurant operations.
+### 3.2 Scenario B: Dine-in (Contactless)
+Ideal for customers already seated at the restaurant.
 
-1.  **Login**: Use the `admin` account.
-2.  **Access Dashboard**: Click the "Order Management (Admin)" link in the Navbar.
-    > ![Admin Dashboard](manual-screenshots/admin_dashboard.png)
-    > *Admin Control Panel*
-3.  **Monitor Orders**: View incoming orders in real-time.
-
-### 3.3 DevOps Capabilities
-**Goal**: Ensure system health.
-
-1.  **Access Monitor**: Go to `http://localhost:9090`.
-2.  **Health Checks**: Verify all microservices (AUTH, ORDER, GATEWAY) are green (UP).
-    > ![Backend Monitoring](manual-screenshots/backend_monitoring.png)
-    > *Spring Boot Admin Dashboard*
-
----
-
-## 4. Permissions & Security (RBAC 權限說明)
-
-The system enforces strict Role-Based Access Control (RBAC) at both the Frontend (UI Guards) and Backend (API PreAuthorize).
-
-| Feature / Resource | ROLE_CUSTOMER | ROLE_ADMIN | Mechanism |
-| :--- | :---: | :---: | :--- |
-| **View Menu** | ✅ | ✅ | Public API |
-| **Add to Cart** | ✅ | ❌ | UI Hide + API Block |
-| **Place Order** | ✅ | ❌ | API `@PreAuthorize("hasRole('CUSTOMER')")` |
-| **View Own Orders** | ✅ | ❌ | Filtered by User ID |
-| **View All Orders** | ❌ | ✅ | UI Guard + API Block |
-| **Access Admin Page** | ❌ | ✅ | Vue Router Guard |
-| **Manage Menu** | ❌ | ✅ | (Future) API Block |
+1.  **Select Table**: Choose **Dine In** and select your **Table Number**.
+2.  **Order**: Browse and add items. The menu will show your table number.
+    > ![Dine-in Menu](manual-screenshots/dine_in_menu.png)
+    > *Note: Pricing and availability are synced in real-time.*
+3.  **Direct Checkout**:
+    *   Review your cart.
+    *   Click **Checkout**.
+    *   **No Login Required**: The order is instantly sent to the kitchen for your table.
+    > ![Dine-in Cart](manual-screenshots/dine_in_cart.png)
 
 ---
 
-## 5. FAQ (常見問題)
+## 4. Admin Guide (Restaurant Staff)
 
-### Q1: I see a white screen when accessing the app.
-**A:** This usually means the Micro-Frontend remotes failed to load.
--   Ensure you ran `npm run preview` (NOT `dev`) for the `sub-app-menu` and `sub-app-admin` folders.
--   Check browser console (F12) for "Failed to load resource" errors.
+### 4.1 Accessing the Dashboard
+1.  Go to `http://localhost:3000/login`.
+2.  Select the **Staff** tab.
+3.  Values: `admin` / `123456`.
+4.  Click **Login**.
 
-### Q2: "Login Failed" or "Network Error".
-**A:** The Backend Gateway is likely down.
--   Run `docker ps` to verify `gateway-service` and `auth-service` are running.
--   Check logs: `docker logs gateway-service`.
+### 4.2 Managing Orders
+The Dashboard provides a real-time view of the restaurant's pulse.
 
-### Q3: Why can't I see the "Order Management" link?
-**A:** You are likely logged in as a `customer`.
--   Logout and sign in with `admin` / `123456`.
+> ![Admin Dashboard](manual-screenshots/admin_dashboard_active.png)
+
+*   **Active Tab**: The default view showing all ongoing orders.
+*   **Kitchen Tab**: Focused view for chefs. Shows only orders with status `PREPARING`.
+*   **Counter Tab**: Focused view for waitstaff. Shows orders ready for pickup (`READY`).
+
+### 4.3 Order Lifecycle
+*   **Accept**: New orders arrive as `PENDING`. Click **Accept** to move them to the Kitchen (`PREPARING`).
+*   **Ready**: When food is cooked, mark as **Ready** to notify the Counter.
+*   **Complete**: When customer picks up the food, mark as **Completed**.
+
+---
+
+## 5. Troubleshooting
+
+*   **White Screen?**: Ensure all micro-frontends are running (`npm run preview` in sub-apps).
+*   **Login Failed?**: Check that the backend services (`auth-service`, `gateway`) are running in Docker.
+*   **Wrong Table?**: If you selected the wrong table in Dine-in mode, refresh the page to reset the session or clear your browser cookies.
