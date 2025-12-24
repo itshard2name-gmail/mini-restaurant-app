@@ -33,11 +33,26 @@ public class OrderService {
     }
 
     public List<Order> getAllOrders() {
-        return orderRepository.findAll();
+        return orderRepository.findAll(org.springframework.data.domain.Sort
+                .by(org.springframework.data.domain.Sort.Direction.DESC, "createdAt"));
     }
 
     public List<Order> getMyOrders(String userId) {
         return orderRepository.findByUserIdOrderByCreatedAtDesc(userId);
+    }
+
+    public List<Order> getActiveOrders(String userId) {
+        List<String> statuses = List.of("PENDING", "PAID", "PREPARING", "READY");
+        return orderRepository.findByUserIdAndStatusIn(userId, statuses, org.springframework.data.domain.Sort
+                .by(org.springframework.data.domain.Sort.Direction.DESC, "createdAt"));
+    }
+
+    public org.springframework.data.domain.Page<Order> getOrderHistory(String userId, int page, int size) {
+        List<String> statuses = List.of("COMPLETED", "CANCELLED");
+        org.springframework.data.domain.Pageable pageable = org.springframework.data.domain.PageRequest.of(page, size,
+                org.springframework.data.domain.Sort.by(org.springframework.data.domain.Sort.Direction.DESC,
+                        "createdAt"));
+        return orderRepository.findByUserIdAndStatusIn(userId, statuses, pageable);
     }
 
     @Transactional
@@ -46,8 +61,36 @@ public class OrderService {
         order.setUserId(userId);
         order.setStatus("PENDING"); // Default to PENDING
 
+        // Map OrderType
+        try {
+            if (request.getOrderType() != null) {
+                com.example.order.entity.OrderType type = com.example.order.entity.OrderType
+                        .valueOf(request.getOrderType());
+                order.setOrderType(type);
+
+                // Validate Table Number for Dine-In
+                if (type == com.example.order.entity.OrderType.DINE_IN) {
+                    if (request.getTableNumber() == null || request.getTableNumber().trim().isEmpty()) {
+                        throw new IllegalArgumentException("Table number is required for Dine-In orders");
+                    }
+                    order.setTableNumber(request.getTableNumber());
+                } else {
+                    order.setTableNumber(null); // Clear table number for Takeout
+                }
+            } else {
+                // Default to TAKEOUT if not specified for backward compatibility
+                order.setOrderType(com.example.order.entity.OrderType.TAKEOUT);
+            }
+        } catch (IllegalArgumentException e) {
+            throw new IllegalArgumentException("Invalid Order Type: " + request.getOrderType());
+        }
+
         List<OrderItem> orderItems = new ArrayList<>();
         BigDecimal totalPrice = BigDecimal.ZERO;
+
+        if (request.getItems() == null || request.getItems().isEmpty()) {
+            throw new IllegalArgumentException("Order items cannot be empty");
+        }
 
         for (OrderItemRequest itemRequest : request.getItems()) {
             Menu menu = menuRepository.findById(java.util.Objects.requireNonNull(itemRequest.getMenuId()))
@@ -60,6 +103,7 @@ public class OrderService {
             orderItem.setSnapshotPrice(menu.getPrice());
             orderItem.setQuantity(
                     java.util.Objects.requireNonNull(itemRequest.getQuantity(), "Quantity cannot be null"));
+            orderItem.setNotes(itemRequest.getNotes());
 
             BigDecimal itemTotal = menu.getPrice().multiply(BigDecimal.valueOf(itemRequest.getQuantity()));
             totalPrice = totalPrice.add(itemTotal);
@@ -138,5 +182,41 @@ public class OrderService {
         Menu menu = menuRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Menu not found: " + id));
         menuRepository.delete(menu);
+    }
+
+    @Transactional
+    public Order cancelOrder(Long orderId, String userId) {
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new RuntimeException("Order not found: " + orderId));
+
+        if (!order.getUserId().equals(userId)) {
+            throw new RuntimeException("Unauthorized: You do not own this order");
+        }
+
+        if (!"PENDING".equals(order.getStatus())) {
+            throw new RuntimeException("Cannot cancel order with status: " + order.getStatus());
+        }
+
+        order.setStatus("CANCELLED");
+        Order savedOrder = orderRepository.save(order);
+
+        // Send RabbitMQ message
+        sendOrderEvent(savedOrder);
+
+        return savedOrder;
+    }
+
+    public org.springframework.data.domain.Page<Order> searchOrders(int page, int size, String status, String date,
+            String query) {
+        org.springframework.data.domain.Pageable pageable = org.springframework.data.domain.PageRequest.of(page, size,
+                org.springframework.data.domain.Sort.by(org.springframework.data.domain.Sort.Direction.DESC,
+                        "createdAt"));
+
+        // Normalize query to lowercase for case-insensitive search if present
+        String finalQuery = (query != null && !query.trim().isEmpty()) ? query.toLowerCase().trim() : null;
+        String finalDate = (date != null && !date.trim().isEmpty()) ? date.trim() : null;
+        String finalStatus = (status != null && !status.trim().isEmpty()) ? status.trim() : null;
+
+        return orderRepository.findOrders(finalStatus, finalDate, finalQuery, pageable);
     }
 }

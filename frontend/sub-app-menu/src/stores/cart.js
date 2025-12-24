@@ -3,6 +3,8 @@ import { ref, computed } from 'vue';
 
 export const useCartStore = defineStore('cart', () => {
     const items = ref({});
+    const orderType = ref(null); // 'DINE_IN' or 'TAKEOUT'
+    const tableNumber = ref(null); // e.g. "5"
 
     const addToCart = (menu) => {
         if (items.value[menu.id]) {
@@ -12,7 +14,8 @@ export const useCartStore = defineStore('cart', () => {
                 menuId: menu.id,
                 name: menu.name,
                 price: menu.price,
-                quantity: 1
+                quantity: 1,
+                notes: ''
             };
         }
     };
@@ -24,6 +27,12 @@ export const useCartStore = defineStore('cart', () => {
             } else {
                 delete items.value[menu.id];
             }
+        }
+    };
+
+    const updateItemNotes = (menuId, notes) => {
+        if (items.value[menuId]) {
+            items.value[menuId].notes = notes;
         }
     };
 
@@ -55,6 +64,9 @@ export const useCartStore = defineStore('cart', () => {
         clearCart,
         cartItems,
         totalPrice,
-        totalQuantity
+        totalQuantity,
+        updateItemNotes,
+        orderType,
+        tableNumber
     };
 });

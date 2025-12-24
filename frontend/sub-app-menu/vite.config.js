@@ -19,7 +19,7 @@ export default defineConfig({
                 './MyOrders': './src/components/MyOrders.vue',
                 './MenuPage': './src/components/MenuPage.vue'
             },
-            shared: ['vue', 'pinia']
+            shared: ['vue', 'pinia', 'vue-router']
         })
     ],
     build: {

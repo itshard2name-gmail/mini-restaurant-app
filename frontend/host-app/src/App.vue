@@ -26,8 +26,10 @@ const checkRole = () => {
     isAdmin.value = false;
   }
 };
+const token = ref(localStorage.getItem('token'));
 
 watch(() => route.path, () => {
+  token.value = localStorage.getItem('token');
   checkRole();
 });
 
@@ -70,7 +72,10 @@ onMounted(() => {
               
               <div class="h-6 w-px bg-white/20 mx-2"></div>
               
-              <button @click="handleLogout" class="text-white/80 hover:text-white text-sm font-medium hover:underline">
+              <router-link v-if="!token" to="/login" class="text-white/80 hover:text-white text-sm font-medium hover:underline">
+                Sign In
+              </router-link>
+              <button v-else @click="handleLogout" class="text-white/80 hover:text-white text-sm font-medium hover:underline">
                 Logout
               </button>
             </div>
@@ -98,7 +103,10 @@ onMounted(() => {
           
           <div class="h-px bg-white/20 mx-2 my-2"></div>
           
-          <button @click="() => { isMenuOpen = false; handleLogout(); }" class="text-left text-white/90 hover:bg-white/10 px-4 py-3 rounded-md font-medium">
+          <router-link v-if="!token" to="/login" class="text-left text-white/90 hover:bg-white/10 px-4 py-3 rounded-md font-medium" @click="isMenuOpen = false">
+             Sign In
+          </router-link>
+          <button v-else @click="() => { isMenuOpen = false; handleLogout(); }" class="text-left text-white/90 hover:bg-white/10 px-4 py-3 rounded-md font-medium">
              Logout
           </button>
       </div>

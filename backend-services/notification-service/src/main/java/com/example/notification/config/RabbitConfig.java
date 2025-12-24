@@ -25,4 +25,9 @@ public class RabbitConfig {
     public Binding binding(Queue queue, TopicExchange exchange) {
         return BindingBuilder.bind(queue).to(exchange).with(ROUTING_KEY);
     }
+
+    @Bean
+    public org.springframework.amqp.support.converter.MessageConverter messageConverter() {
+        return new org.springframework.amqp.support.converter.Jackson2JsonMessageConverter();
+    }
 }

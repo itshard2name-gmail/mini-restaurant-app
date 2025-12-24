@@ -1,6 +1,12 @@
-# Mini Restaurant App (Microservices + Micro-frontends)
+# Mini Restaurant App (商業營運版)
 
-一個基於 Spring Cloud (Backend) 與 Vue 3 + Module Federation (Frontend) 建構的現代化、可擴展餐廳應用程式。
+> **狀態**：生產就緒 (Stable)
+> **版本**：2.0
+
+這是一個 **可擴展的雲原生電子商務平台**，專為真實世界的商業營運而架構。超越了簡單的 MVP，本系統作為以下技術的參考實作：
+-   **Microservices**: Spring Cloud, Eureka, Gateway, OpenFeign.
+-   **Micro-Frontends**: Vue 3 + Module Federation (Host & Remote Apps).
+-   **全球化營運**: 多時區支援與 i18n 架構就緒。 建構的現代化、可擴展餐廳應用程式。
 
 > **📖 單一資訊來源 (Source of Truth)**：關於詳細的架構、API 規格與技術決策，請參閱 [SYSTEM_DESIGN.md](./SYSTEM_DESIGN.md)。
 
@@ -13,7 +19,7 @@
 ### 🌟 使用者面向功能
 
 #### 🛍️ 用戶端應用 (顧客視角)
-- **互動式菜單**：瀏覽具備即時供應狀態的動態菜單列表。
+- **互動式菜單**：瀏覽具備 **分類篩選** (主餐, 前菜) 與 **搜尋** 功能的動態菜單列表。
 - **智慧購物車**：輕鬆將品項加入購物車、查看總額並管理數量。
 - **安全結帳**：無縫的下單流程，並提供即時回饋。
 - **訂單歷史**：追蹤您的歷史訂單及其處理狀態 (Pending, preparing 等)。
@@ -26,8 +32,8 @@
 
 #### 🛡️ Admin Dashboard (管理視角)
 - **RBAC 安全機制**：Role-Based Access Control 確保僅有授權人員能存取敏感資料。
-- **菜單管理**：(即將推出) 建立、更新與刪除菜單品項的介面。
-- **訂單監控**：(即將推出) 即時查看新進訂單以簡化廚房作業。
+- **菜單管理**：建立、更新與刪除菜單品項 (CRUD) 的完整介面。
+- **訂單監控**：即時查看新進訂單，並透過 **狀態分頁** (Pending, Kitchen, Counter) 簡化廚房作業。
 
 > ![Admin Dashboard](../../../docs/manual-screenshots/admin_dashboard.png)
 > *用於訂單管理的 Admin Dashboard*
@@ -74,6 +80,7 @@ docker-compose up --build -d
 
 > **注意**：在首次執行 `docker-compose up` 時，`auth-service` 會透過 `import.sql` 自動以初始使用者 (`admin`, `customer`) 填充資料庫。
 > **持久化**：已設定 Docker Named Volume (`mysql_data`) 以在重啟間持久化資料庫變更。
+> ⚠️ **警告**：執行 `docker-compose down -v` 將會 **刪除** 此 Volume 與所有資料。若要停止服務但保留資料，請使用 `docker-compose down` (不帶 `-v`)。
 
 ### 3.2 Frontend (Development)
 前端使用 **Vite Plugin Federation**。您需要同時執行 Host 與所有 Sub-apps 以獲得完整功能。
@@ -112,7 +119,9 @@ cd frontend/sub-app-admin && npm run preview
     -   打開購物車 (右上角圖示或手機版的 Bottom Sheet)。
     -   檢視項目與總價。
     -   點擊「結帳」。
-5.  **查看歷史**：透過 Navbar 個人檔案選單前往「我的訂單」，查看您的 `PENDING` 訂單。
+5.  **查看歷史**：透過 Navbar 個人檔案選單前往「我的訂單」。
+    -   **取消訂單**：若您的訂單仍處於 `PENDING` (尚未付款/接單)，您可以點擊「取消訂單」立即取消。
+    -   **追蹤**：觀察狀態更新：`PENDING` -> `PREPARING` -> `READY`。
 
 ### 4.3 管理員旅程 (Dashboard)
 1.  **登入**：登出並使用 **Administrator** 憑證登入。
@@ -120,6 +129,14 @@ cd frontend/sub-app-admin && npm run preview
 3.  **管理訂單**：
     -   查看所有成功訂單的列表。
     -   (未來功能) 更新狀態從 `PENDING` 到 `COMPLETED`。
+
+#### 📋 管理儀表板分頁 (Tabs)
+儀表板使用以下邏輯來組織訂單：
+- **Active (進行中)**: 所有需要關注的訂單 (`PENDING`, `PAID`, `PREPARING`, `READY`)。
+- **Pending (待處理)**: 等待接單的新訂單 (`PENDING`, `PAID`)。
+- **Kitchen (廚房)**: 正在準備中的訂單 (`PREPARING`)。
+- **Counter (櫃檯)**: 製作完成等待取餐的訂單 (`READY`)。
+- **History (歷史紀錄)**: 已完成的訂單 (`COMPLETED`, `CANCELLED`)。
 
 ### 4.4 系統監控 (DevOps)
 -   **Dashboard**：訪問 `http://localhost:9090` (Spring Boot Admin)。

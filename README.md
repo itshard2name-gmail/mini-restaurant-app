@@ -1,6 +1,12 @@
-# Mini Restaurant App (Microservices + Micro-frontends)
+# Mini Restaurant App (Commercial Edition)
 
-A modern, scalable restaurant application built with Spring Cloud (Backend) and Vue 3 + Module Federation (Frontend).
+> **Status**: Production-Ready / Stable
+> **Version**: 2.0
+
+A **scalable, cloud-native e-commerce platform** architected for real-world commercial operation. Moving beyond a simple MVP, this system serves as a reference implementation for:
+-   **Microservices**: Spring Cloud, Eureka, Gateway, OpenFeign.
+-   **Micro-Frontends**: Vue 3 + Module Federation (Host & Remote Apps).
+-   **Global Operations**: Multi-timezone support & i18n architectural readiness.
 
 > **📖 Source of Truth**: For detailed architecture, API specs, and technical decisions, please refer to [SYSTEM_DESIGN.md](./SYSTEM_DESIGN.md).
 
@@ -13,7 +19,7 @@ Welcome to the Mini Restaurant App! This platform demonstrates a robust, modern 
 ### 🌟 User-Facing Features
 
 #### 🛍️ Client Application (Customer View)
-- **Interactive Menu**: Browse a dynamic list of menu items with real-time availability.
+- **Interactive Menu**: Browse menu items with **Category Filters** (Main, Starter) and **Search** capability. Real-time availability.
 - **Smart Cart**: Add items to your cart, view totals, and manage quantities effortlessly.
 - **Secure Checkout**: Seamless order placement process with instant feedback.
 - **Order History**: Track your past orders and their processing status (Pending, preparing, etc.).
@@ -26,8 +32,8 @@ Welcome to the Mini Restaurant App! This platform demonstrates a robust, modern 
 
 #### 🛡️ Admin Dashboard (Management View)
 - **RBAC Security**: Role-Based Access Control ensuring only authorized personnel access sensitive data.
-- **Menu Management**: (Coming soon) Interface to create, update, and delete menu items.
-- **Order Monitoring**: (Coming soon) Real-time view of incoming orders to streamline kitchen operations.
+- **Menu Management**: Interface to create, update, and delete menu items (CRUD).
+- **Order Monitoring**: Real-time view of incoming orders with **Status Tabs** (Pending, Kitchen, Counter) to streamline operations.
 
 > ![Admin Dashboard](docs/manual-screenshots/admin_dashboard.png)
 > *Admin Dashboard for order management*
@@ -74,6 +80,7 @@ docker-compose up --build -d
 
 > **Note**: On the first `docker-compose up`, the `auth-service` automatically seeds the database with initial users (`admin`, `customer`) via `import.sql`.
 > **Persistence**: A Docker Named Volume (`mysql_data`) is configured to persist database changes across restarts.
+> ⚠️ **Warning**: Running `docker-compose down -v` will **DELETE** this volume and ALL database data. Use `docker-compose down` (without `-v`) to stop services while keeping data.
 
 ### 3.2 Frontend (Development)
 The frontend uses **Vite Plugin Federation**. You need to run the host and all sub-apps simultaneously for full functionality.
@@ -112,7 +119,9 @@ The system comes with pre-seeded accounts (see `auth-service/src/main/resources/
     -   Open the Cart (top-right icon or bottom sheet on mobile).
     -   Review items and total price.
     -   Click "Checkout".
-5.  **View History**: Go to "My Orders" via the Navbar profile menu to see your `PENDING` orders.
+5.  **View History**: Go to "My Orders" via the Navbar profile menu.
+    -   **Cancel Order**: If your order is still `PENDING` (not yet accepted/paid), you can click "Cancel Order" to instantly cancel it.
+    -   **Track**: Watch status update from `PENDING` -> `PREPARING` -> `READY`.
 
 ### 4.3 Administrator Journey (Dashboard)
 1.  **Login**: Logout and sign in with the **Administrator** credentials.
@@ -120,6 +129,14 @@ The system comes with pre-seeded accounts (see `auth-service/src/main/resources/
 3.  **Manage Orders**:
     -   View a list of all successful orders.
     -   (Future) Update status from `PENDING` to `COMPLETED`.
+
+#### 📋 Admin Dashboard Tabs
+The dashboard organizes orders using the following logic:
+- **Active**: All orders requiring attention (`PENDING`, `PAID`, `PREPARING`, `READY`).
+- **Pending**: New orders awaiting acceptance (`PENDING`, `PAID`).
+- **Kitchen**: Orders currently being prepared (`PREPARING`).
+- **Counter**: Orders ready for pickup (`READY`).
+- **History**: Finalized orders (`COMPLETED`, `CANCELLED`).
 
 ### 4.4 System Monitoring (DevOps)
 -   **Dashboard**: Visit `http://localhost:9090` (Spring Boot Admin).

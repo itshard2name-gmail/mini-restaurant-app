@@ -1,6 +1,6 @@
 <template>
-  <div class="p-8 bg-gray-100 min-h-screen font-sans">
-    <div class="max-w-7xl mx-auto">
+  <div id="sub-app-admin" class="bg-gray-100 min-h-screen font-sans">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       
       <!-- Top Navigation Header -->
       <div class="flex flex-col md:flex-row items-center justify-between mb-8 pb-6 border-b border-gray-200">
@@ -12,49 +12,66 @@
         <!-- Navigation Tabs -->
         <div class="mt-4 md:mt-0 bg-white p-1 rounded-lg border border-gray-200 shadow-sm flex space-x-1">
            <button 
-             @click="currentTab = 'orders'"
+             v-for="nav in navigation" 
+             :key="nav.name"
+             @click="currentTab = nav.name"
              :class="['px-4 py-2 text-sm font-medium rounded-md transition-all duration-200', 
-                      currentTab === 'orders' ? 'bg-indigo-50 text-indigo-700 shadow-sm' : 'text-gray-500 hover:text-gray-900 hover:bg-gray-50']"
+                      currentTab === nav.name ? 'bg-indigo-50 text-indigo-700 shadow-sm' : 'text-gray-500 hover:text-gray-900 hover:bg-gray-50']"
            >
-             Active Orders
-           </button>
-           <button 
-             @click="currentTab = 'menu'"
-             :class="['px-4 py-2 text-sm font-medium rounded-md transition-all duration-200', 
-                      currentTab === 'menu' ? 'bg-indigo-50 text-indigo-700 shadow-sm' : 'text-gray-500 hover:text-gray-900 hover:bg-gray-50']"
-           >
-             Menu Management
+             {{ nav.label }}
            </button>
         </div>
       </div>
       
-      <!-- Content Area -->
-      <transition 
-         enter-active-class="transition ease-out duration-200" 
-         enter-from-class="opacity-0 translate-y-2" 
-         enter-to-class="opacity-100 translate-y-0"
-         leave-active-class="transition ease-in duration-150" 
-         leave-from-class="opacity-100 translate-y-0" 
-         leave-to-class="opacity-0 translate-y-2"
-         mode="out-in"
-      >
-        <component :is="activeComponent" />
-      </transition>
+      <!-- Main Content Area -->
+      <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        
+         <!-- Component View -->
+         <transition name="fade" mode="out-in">
+            <KeepAlive>
+               <component :is="currentComponent" />
+            </KeepAlive>
+         </transition>
 
+      </main>
     </div>
   </div>
 </template>
 
 <script setup>
-import { ref, computed } from 'vue';
-import '../style.css'; 
+import { ref, computed, defineAsyncComponent } from 'vue';
 
-import OrderManagement from './OrderManagement.vue';
-import MenuManagement from './MenuManagement.vue';
+import '../tailwind.utilities.css';
 
-const currentTab = ref('orders');
+// Async Components
+const OrderManagement = defineAsyncComponent(() => import('./OrderManagement.vue'));
+const MenuManagement = defineAsyncComponent(() => import('./MenuManagement.vue'));
+const AnalyticsBoard = defineAsyncComponent(() => import('./AnalyticsBoard.vue'));
+const SettingsBoard = defineAsyncComponent(() => import('./SettingsBoard.vue'));
 
-const activeComponent = computed(() => {
-  return currentTab.value === 'orders' ? OrderManagement : MenuManagement;
+const currentTab = ref('analytics'); // Default to Analytics for demo
+
+const navigation = [
+  { name: 'orders', label: 'Active Orders', component: OrderManagement },
+  { name: 'menu', label: 'Menu Management', component: MenuManagement },
+  { name: 'analytics', label: 'Reports (BI)', component: AnalyticsBoard },
+  { name: 'settings', label: 'Settings', component: SettingsBoard },
+];
+
+const currentComponent = computed(() => {
+  const tab = navigation.find(n => n.name === currentTab.value);
+  return tab ? tab.component : OrderManagement;
 });
 </script>
+
+<style scoped>
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.2s ease;
+}
+
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
+}
+</style>

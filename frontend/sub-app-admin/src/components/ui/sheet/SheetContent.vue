@@ -39,13 +39,15 @@ const forwarded = useForwardPropsEmits(delegatedProps, emits);
 </script>
 
 <template>
-  <DialogPortal>
+  <DialogPortal to="#sub-app-admin">
     <DialogOverlay
       class="fixed inset-0 z-50 bg-black/80 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0"
+      style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; z-index: 9999;"
     />
     <DialogContent
       :class="cn(sheetVariants({ side }), props.class)"
       v-bind="{ ...forwarded, ...$attrs }"
+      style="position: fixed; z-index: 10000;"
     >
       <slot />
 

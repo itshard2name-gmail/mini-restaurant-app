@@ -41,6 +41,10 @@ spring:
             - Path=/notification/**
           filters:
             - StripPrefix=1
+        - id: websocket_route
+          uri: lb://notification-service
+          predicates:
+            - Path=/ws/**
 
 eureka:
   client:

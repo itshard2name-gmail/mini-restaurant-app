@@ -36,10 +36,22 @@ public class AdminOrderController {
     public ResponseEntity<Order> updateStatus(@PathVariable Long id,
             @RequestBody java.util.Map<String, String> statusUpdate) {
         String newStatus = statusUpdate.get("status");
-        if (newStatus == null || (!newStatus.equals("PREPARING") && !newStatus.equals("COMPLETED"))) {
+        if (newStatus == null
+                || (!newStatus.equals("PREPARING") && !newStatus.equals("READY") && !newStatus.equals("COMPLETED"))) {
             return ResponseEntity.badRequest().build();
         }
 
         return ResponseEntity.ok(orderService.updateStatus(id, newStatus));
+    }
+
+    @GetMapping("/search")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<org.springframework.data.domain.Page<Order>> searchOrders(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size,
+            @RequestParam(required = false) String status,
+            @RequestParam(required = false) String date,
+            @RequestParam(required = false) String query) {
+        return ResponseEntity.ok(orderService.searchOrders(page, size, status, date, query));
     }
 }

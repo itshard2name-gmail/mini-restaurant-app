@@ -15,4 +15,6 @@ public class Menu {
     private BigDecimal price;
     private String description;
     private String imageUrl;
+
+    private String category;
 }

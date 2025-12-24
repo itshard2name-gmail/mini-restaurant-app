@@ -28,6 +28,8 @@ public class SecurityConfig {
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
                         // Public endpoints (gateway validates first usually, but safe to allow)
+                        .requestMatchers("/orders/settings", "/orders/settings/**").permitAll() // Explicit public
+                                                                                                // access
                         .requestMatchers("/api/orders/my").authenticated() // Require auth for user orders
                         // Admin endpoints handled by method security annotations
                         .anyRequest().permitAll() // Allow other requests, rely on annotation security for restricted

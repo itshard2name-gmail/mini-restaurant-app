@@ -19,7 +19,7 @@ export default defineConfig({
         'sub-app-menu': 'http://localhost:5001/assets/remoteEntry.js',
         'sub-app-admin': 'http://localhost:5003/assets/remoteEntry.js',
       },
-      shared: ['vue', 'pinia']
+      shared: ['vue', 'pinia', 'vue-router']
     })
   ],
   build: {
@@ -29,7 +29,7 @@ export default defineConfig({
     port: 3000,
     proxy: {
       '/api': {
-        target: 'http://localhost:8088',
+        target: 'http://localhost:8888',
         changeOrigin: true
       }
     }

@@ -18,6 +18,8 @@ static_resources:
           "@type": type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
           stat_prefix: ingress_http
           codec_type: AUTO
+          upgrade_configs:
+            - upgrade_type: "websocket"
           route_config:
             name: local_route
             virtual_hosts:
@@ -28,6 +30,13 @@ static_resources:
                   prefix: "/api"
                 route:
                   cluster: gateway_service
+              - match:
+                  prefix: "/ws"
+                route:
+                  cluster: gateway_service
+                  timeout: 0s # Infinite timeout for WS
+                  max_stream_duration:
+                    grpc_timeout_header_max: 0s
               - match:
                   prefix: "/"
                 route:

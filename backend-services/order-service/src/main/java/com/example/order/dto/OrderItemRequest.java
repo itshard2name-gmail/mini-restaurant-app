@@ -6,4 +6,5 @@ import lombok.Data;
 public class OrderItemRequest {
     private Long menuId;
     private Integer quantity;
+    private String notes;
 }

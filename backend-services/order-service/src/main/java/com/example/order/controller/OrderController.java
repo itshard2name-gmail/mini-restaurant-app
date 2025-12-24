@@ -80,8 +80,35 @@ public class OrderController {
         return ResponseEntity.ok(orderService.getMyOrders(userId));
     }
 
+    @GetMapping("/my/active")
+    @org.springframework.security.access.prepost.PreAuthorize("hasRole('USER')")
+    public ResponseEntity<List<Order>> getMyActiveOrders(@RequestHeader("X-User-Id") String userId) {
+        if (userId == null || userId.isEmpty()) {
+            return ResponseEntity.badRequest().build();
+        }
+        return ResponseEntity.ok(orderService.getActiveOrders(userId));
+    }
+
+    @GetMapping("/my/history")
+    @org.springframework.security.access.prepost.PreAuthorize("hasRole('USER')")
+    public ResponseEntity<org.springframework.data.domain.Page<Order>> getOrderHistory(
+            @RequestHeader("X-User-Id") String userId,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size) {
+        if (userId == null || userId.isEmpty()) {
+            return ResponseEntity.badRequest().build();
+        }
+        return ResponseEntity.ok(orderService.getOrderHistory(userId, page, size));
+    }
+
     @PatchMapping("/{id}/pay")
     public ResponseEntity<Order> payOrder(@PathVariable Long id) {
         return ResponseEntity.ok(orderService.payOrder(id));
+    }
+
+    @PatchMapping("/{id}/cancel")
+    @org.springframework.security.access.prepost.PreAuthorize("hasRole('USER')")
+    public ResponseEntity<Order> cancelOrder(@PathVariable Long id, @RequestHeader("X-User-Id") String userId) {
+        return ResponseEntity.ok(orderService.cancelOrder(id, userId));
     }
 }

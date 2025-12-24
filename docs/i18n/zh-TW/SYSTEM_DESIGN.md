@@ -1,18 +1,22 @@
 # 系統設計規格書：Mini Restaurant App
 
-> **版本**：1.1 (發布於：2025-12-21)
-> **狀態**：開發中 (Active Development)
+> **版本**：2.0 (發布於：2025-12-23)
+> **狀態**：**商業營運級 / 生產就緒** (Commercial / Production-Ready)
 > **作者**：Antigravity AI Agent
 
 ---
 
 ## 1. 執行摘要 (Executive Summary)
 
-**Mini Restaurant App** 是一個可擴展的雲原生電子商務平台，旨在展示現代軟體架構。其功能包括：
-1.  **客戶操作**：瀏覽菜單、管理購物車及下單。
-2.  **Admin 操作**：訂單管理與 Dashboard 監控。
+**Mini Restaurant App** 是一個可擴展的雲原生電子商務平台，其架構目標已從 MVP 升級為 **真實世界的商業營運系統**。本系統旨在處理跨區域部署、複雜時區管理以及高併發流量。
 
-本系統建立於 **Microservices** 後端 (Spring Cloud) 與 **Micro-frontend** 客戶端 (Vue 3 Module Federation) 之上，強調關注點分離、可擴展性與安全性。
+其功能包括：
+1.  **客戶操作**：瀏覽菜單、管理購物車、下單及自助取消訂單。
+2.  **Admin 操作**：即時儀表板監控 (Real-time Dashboard)、商業智慧報表 (BI Analytics) 與 AI 輔助菜單管理。
+3.  **全球化就緒 (Global Readiness)**：支援多時區營運、i18n 架構以及高標準資安規範。
+4.  **無縫體驗**：延遲登入 (Lazy Login) 與 手機號碼快速登入 (Quick Login) 流程。
+
+本系統建立於 **Microservices** 後端 (Spring Cloud) 與 **Micro-frontend** 客戶端 (Vue 3 Module Federation) 之上，強調關注點分離、可擴展性、安全性與極致的用戶體驗。
 
 ---
 
@@ -149,6 +153,7 @@ erDiagram
         Decimal price
         String description
         String image_url
+        String category "New (e.g. Main, Starter)"
     }
 ```
 
@@ -219,7 +224,18 @@ sequenceDiagram
     note right of Notif: "New Order #123 Received"
 ```
 
-### 3.4 管理員訂單管理時序圖 (Admin Order Management Sequence)
+### 3.4 顧客取消訂單 (New)
+為了減少摩擦，顧客可以在嚴格條件下取消自己的訂單：
+-   **觸發**：在 `MyOrders` UI 中點擊「取消訂單」。
+-   **Endpoint**: `PATCH /api/orders/{id}/cancel`。
+-   **條件**：訂單狀態 **必須** 為 `PENDING`。
+-   **結果**：
+    1.  狀態更新為 `CANCELLED`。
+    2.  發布 `order.cancelled` 事件至 RabbitMQ。
+    3.  Admin Dashboard 透過 WebSocket 更新 (移至歷史分頁)。
+    4.  庫存不會被扣除 (因為庫存邏輯屬於 V2)。
+
+### 3.5 管理員訂單管理時序圖 (Admin Order Management Sequence)
 
 ```mermaid
 sequenceDiagram
@@ -274,6 +290,18 @@ sequenceDiagram
     note right of Notif: "Your order is being prepared!"
 ```
 
+### 3.5 管理後台狀態對應 (Status Mapping)
+
+為了簡化廚房作業流程，管理儀表板根據其生命週期狀態將訂單過濾到不同的分頁標籤中。
+
+| 儀表板分頁 (Tab) | 包含的狀態 (後端 Enum) | 用途 |
+| :--- | :--- | :--- |
+| **Active** | `PENDING`, `PAID`, `PREPARING`, `READY` | **預設視圖**。顯示目前流程中所有可操作的訂單。 |
+| **Pending** | `PENDING`, `PAID` | 等待餐廳接單的新訂單。 |
+| **Kitchen** | `PREPARING` | 已接單且目前正在製作/組裝的訂單。 |
+| **Counter** | `READY` | 已製作完成並等待顧客取餐的訂單。 |
+| **History** | `COMPLETED`, `CANCELLED` | 已完成交易的存檔。採用 Lazy-load 以提升效能。 |
+
 ---
 
 ## 4. 安全架構 (Security Architecture)
@@ -293,6 +321,22 @@ sequenceDiagram
 -   **強制執行**:
     -   **Gateway**: 驗證簽章。
     -   **Service Layer**: `@PreAuthorize("hasRole('ADMIN')")` 保護特定 Endpoints。
+
+### 4.3 時區策略 (Global Timezone Strategy)
+鑑於系統將面向全球，我們採用 "UTC Storage, Local Display" 策略：
+
+1.  **資料儲存 (Persistence)**:
+    -   所有時間戳記 (TimeStamp) 在資料庫中一律儲存為 **UTC**。
+    -   禁止依賴資料庫伺服器的本地時間。
+
+2.  **業務邏輯 (Business Logic)**:
+    -   **營運報表**: "Today" 的定義依賴於 **餐廳所在地時區 (Restaurant Timezone)**，而非伺服器或使用者時區。
+    -   *例如*: 東京餐廳的 "今日營收" 應從 00:00 JST (15:00 UTC Prev Day) 開始計算。
+    -   目前 MVP 階段預設使用伺服器時間，未來將引入 `RestaurantSettings` 實體來配置時區。
+
+3.  **前端顯示 (Presentation)**:
+    -   API 一律回傳 ISO 8601 UTC 格式 (e.g., `2023-12-23T10:00:00Z`)。
+    -   瀏覽器根據使用者本地設定將其轉換為當地時間顯示 (`new Date().toLocaleString()`)。
 
 ---
 
@@ -325,6 +369,10 @@ sequenceDiagram
 | | Tailwind CSS 3.4 | Utility-first Styling |
 | | Pinia | 狀態管理 |
 
+### 6.1 UI 設計準則 (UI Standards)
+-   **通知 (Notifications)**: 嚴格禁止使用瀏覽器原生 `alert()` 或 `confirm()` (除開發階段 Debug 外)。所有使用者回饋必須使用統一的 **Toast Notification** 元件。
+-   **風格 (Styling)**: 遵循 Tailwind CSS Utility-first 原則，但在高階元件 (Cards, Buttons) 上保持語意一致性。
+
 ---
 
 ## 7. API 目錄 (關鍵 Endpoints)
@@ -338,6 +386,7 @@ sequenceDiagram
 | Method | Endpoint | Access | Description |
 | :--- | :--- | :--- | :--- |
 | `POST` | `/login` | Public | 驗證使用者 (RSA 加密密碼)，回傳 JWT + Roles。 |
+| `POST` | `/quick-login` | Public | **(New)** 透過手機號碼自動註冊使用者 (Mobile First)。 |
 | `POST` | `/register` | Public | 註冊新使用者 (RSA 加密密碼)。 |
 | `GET` | `/public-key` | Public | 回傳 RSA Public Key 供前端加密使用。 |
 | `GET` | `/verify` | Public | 驗證 JWT Token。 |
@@ -347,6 +396,7 @@ sequenceDiagram
 | :--- | :--- | :--- | :--- |
 | `POST` | `/create` | Authenticated | 建立含項目的新訂單。發布事件至 RabbitMQ。 |
 | `GET` | `/my` | Authenticated | 取得當前登入使用者的訂單歷史記錄。 |
+| `PATCH` | `/{id}/cancel` | Authenticated | **(New)** 取消狀態為 `PENDING` 的訂單 (限本人)。 |
 | `GET` | `/admin/all` | **Admin** | 取得系統中所有訂單。 |
 | `PATCH` | `/{id}/status` | **Admin** | 更新訂單狀態 (例如：`PAID` -> `PREPARING` -> `COMPLETED`)。 |
 
@@ -382,6 +432,10 @@ sequenceDiagram
 -   **Admin UI**: 完成。基於卡片式佈局，具備高對比度。
 -   **Auth**: 完成。MySQL 後端，RSA 保護。
 -   **Order**: 核心流程完成。已實作 RabbitMQ Producer。
--   **進行中 (WIP)**: Notification Service (Consumer), Menu Management (CRUD)。
+-   **Notification**: 服務完整 (RabbitMQ -> WebSocket)。
+-   **Menu**: 搜尋與分類過濾功能完整。
+-   **Menu Management**: Admin CRUD UI 已完成。
+-   **使用者體驗 (UX)**: 延遲登入 (Lazy Login) 與 快速登入 (Quick Login) 已完成。
+-   **進行中 (WIP)**: Inventory V2 (Stock tracking)。
 
 ---

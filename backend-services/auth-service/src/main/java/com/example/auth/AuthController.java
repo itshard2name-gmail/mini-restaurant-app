@@ -13,6 +13,13 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
+import com.example.auth.model.Role;
+import com.example.auth.model.User;
+import com.example.auth.repository.RoleRepository;
+import com.example.auth.repository.UserRepository;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import java.util.HashSet;
+import java.util.Set;
 
 @RestController
 @RequestMapping("/auth")
@@ -22,13 +29,64 @@ public class AuthController {
     private final JwtUtil jwtUtil;
     private final RsaUtil rsaUtil;
     private final StringRedisTemplate redisTemplate;
+    private final UserRepository userRepository;
+    private final RoleRepository roleRepository;
+    private final PasswordEncoder passwordEncoder;
 
     public AuthController(AuthenticationManager authenticationManager, JwtUtil jwtUtil, RsaUtil rsaUtil,
-            StringRedisTemplate redisTemplate) {
+            StringRedisTemplate redisTemplate, UserRepository userRepository, RoleRepository roleRepository,
+            PasswordEncoder passwordEncoder) {
         this.authenticationManager = authenticationManager;
         this.jwtUtil = jwtUtil;
         this.rsaUtil = rsaUtil;
         this.redisTemplate = redisTemplate;
+        this.userRepository = userRepository;
+        this.roleRepository = roleRepository;
+        this.passwordEncoder = passwordEncoder;
+    }
+
+    @PostMapping("/quick-login")
+    public ResponseEntity<?> quickLogin(@RequestBody QuickLoginRequest request) {
+        try {
+            String phone = request.getPhone();
+            if (phone == null || phone.trim().isEmpty()) {
+                return ResponseEntity.badRequest().body("Phone number is required");
+            }
+
+            // Check if user exists
+            User user = userRepository.findByUsername(phone).orElse(null);
+
+            if (user == null) {
+                // Register new user
+                user = new User();
+                user.setUsername(phone);
+                // Set a random/dummy password (users can reset later if implemented, but
+                // primarily use phone)
+                user.setPassword(passwordEncoder.encode("{noop}" + java.util.UUID.randomUUID().toString()));
+
+                Role userRole = roleRepository.findByName("ROLE_USER")
+                        .orElseThrow(() -> new RuntimeException("Error: Role is not found."));
+                Set<Role> roles = new HashSet<>();
+                roles.add(userRole);
+                user.setRoles(roles);
+
+                userRepository.save(user);
+            }
+
+            // Generate Token directly (Bypassing AuthManager since we trust the phone input
+            // for MVP)
+            List<String> roles = user.getRoles().stream()
+                    .map(Role::getName)
+                    .collect(Collectors.toList());
+
+            String token = jwtUtil.generateToken(user.getUsername(), roles);
+            redisTemplate.opsForValue().set("token:" + user.getUsername(), token, 24, TimeUnit.HOURS);
+
+            return ResponseEntity.ok(Map.of("token", token, "roles", roles));
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.status(500).body("Error processing quick login");
+        }
     }
 
     @PostMapping("/login")
@@ -95,6 +153,18 @@ public class AuthController {
 
         public void setPassword(String password) {
             this.password = password;
+        }
+    }
+
+    public static class QuickLoginRequest {
+        private String phone;
+
+        public String getPhone() {
+            return phone;
+        }
+
+        public void setPhone(String phone) {
+            this.phone = phone;
         }
     }
 }

@@ -25,10 +25,10 @@ const AdminDashboard = defineAsyncComponent(() =>
 )
 
 const routes = [
-    { path: '/', redirect: '/login' },
+    { path: '/', redirect: '/menu' },
     { path: '/login', component: Login, meta: { guest: true } },
-    { path: '/menu', component: MenuList, meta: { requiresAuth: true, roles: ['ROLE_USER', 'ROLE_ADMIN'] } },
-    { path: '/orders', component: MyOrders, meta: { requiresAuth: true, roles: ['ROLE_USER', 'ROLE_ADMIN'] } },
+    { path: '/menu', component: MenuList, meta: { requiresAuth: false } },
+    { path: '/my-orders', component: MyOrders, meta: { requiresAuth: true, roles: ['ROLE_USER', 'ROLE_ADMIN'] } },
     { path: '/admin', component: AdminDashboard, meta: { requiresAuth: true, roles: ['ROLE_ADMIN'] } }
 ]
 
@@ -72,6 +72,7 @@ router.beforeEach((to, from, next) => {
         return next('/menu');
     }
 
+    // Allow access to public routes (like /menu)
     next();
 });
 

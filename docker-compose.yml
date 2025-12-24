@@ -57,7 +57,7 @@ services:
   envoy:
     image: envoyproxy/envoy:v1.28-latest
     ports:
-      - "80:80"
+      - "8888:80"
       - "9901:9901"
     volumes:
       - ./infrastructure/envoy/envoy.yaml:/etc/envoy/envoy.yaml

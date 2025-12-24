@@ -47,6 +47,7 @@
         <CardContent class="p-5 flex-1 space-y-2">
             <div class="flex justify-between items-start">
                 <h3 class="text-lg font-bold text-gray-900 line-clamp-1">{{ item.name }}</h3>
+                <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-blue-100 text-blue-800 mr-2">{{ item.category || 'Main' }}</span>
                 <span class="text-lg font-black text-indigo-600">${{ item.price }}</span>
             </div>
             <p class="text-sm text-gray-500 line-clamp-3">{{ item.description }}</p>
@@ -74,12 +75,28 @@
                         <input v-model="formData.price" type="number" step="0.01" required class="flex h-10 w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-gray-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 disabled:cursor-not-allowed disabled:opacity-50" placeholder="0.00">
                     </div>
                     <div class="space-y-2">
+                        <label class="text-sm font-medium leading-none text-gray-700">Category</label>
+                        <select v-model="formData.category" class="flex h-10 w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500">
+                            <option value="Main">Main</option>
+                            <option value="Starter">Starter</option>
+                            <option value="Drink">Drink</option>
+                            <option value="Dessert">Dessert</option>
+                        </select>
+                    </div>
+                    <div class="space-y-2">
                         <label class="text-sm font-medium leading-none text-gray-700">Description</label>
                         <textarea v-model="formData.description" class="flex min-h-[80px] w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm ring-offset-background placeholder:text-gray-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 disabled:cursor-not-allowed disabled:opacity-50" placeholder="Describe the dish..."></textarea>
                     </div>
                     <div class="space-y-2">
                         <label class="text-sm font-medium leading-none text-gray-700">Image URL</label>
-                         <input v-model="formData.imageUrl" class="flex h-10 w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-gray-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 disabled:cursor-not-allowed disabled:opacity-50" placeholder="https://...">
+                        <div class="flex space-x-2">
+                            <input v-model="formData.imageUrl" class="flex h-10 w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-gray-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 disabled:cursor-not-allowed disabled:opacity-50" placeholder="https://...">
+                            <Button type="button" variant="outline" @click="generateRandomImage" class="whitespace-nowrap bg-indigo-50 text-indigo-700 hover:bg-indigo-100 border-indigo-200" title="Auto-fill random image based on name">
+                                <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"></path></svg>
+                                Magic Fill
+                            </Button>
+                        </div>
+                        <p class="text-xs text-gray-500">Pro tip: Click 'Magic Fill' to auto-generate an image based on the item name.</p>
                     </div>
                 </div>
                 <div class="px-6 py-4 bg-gray-50 border-t border-gray-100 flex justify-end space-x-2">
@@ -109,6 +126,7 @@ const formData = ref({
     id: null,
     name: '',
     price: '',
+    category: 'Main',
     description: '',
     imageUrl: ''
 });
@@ -129,19 +147,28 @@ const fetchMenus = async () => {
     }
 };
 
+const generateRandomImage = () => {
+    const keyword = formData.value.name || formData.value.category || 'food';
+    const safeKeyword = encodeURIComponent(keyword.trim());
+    // Use Pollinations.ai (Free AI Image Generation)
+    // Add random param to force fresh generation if needed, though pollinations generates new seed by default usually.
+    // Specifying nologo=true to cleaner images if supported, or just prompt.
+    formData.value.imageUrl = `https://image.pollinations.ai/prompt/${safeKeyword}`;
+};
+
 const openModal = (item = null) => {
     isEditing.value = !!item;
     if (item) {
         formData.value = { ...item };
     } else {
-        formData.value = { id: null, name: '', price: '', description: '', imageUrl: '' };
+        formData.value = { id: null, name: '', price: '', category: 'Main', description: '', imageUrl: '' };
     }
     showModal.value = true;
 };
 
 const closeModal = () => {
     showModal.value = false;
-    formData.value = { id: null, name: '', price: '', description: '', imageUrl: '' };
+    formData.value = { id: null, name: '', price: '', category: 'Main', description: '', imageUrl: '' };
 };
 
 const saveItem = async () => {
@@ -150,6 +177,7 @@ const saveItem = async () => {
         const payload = {
             name: formData.value.name,
             price: parseFloat(formData.value.price),
+            category: formData.value.category,
             description: formData.value.description,
             imageUrl: formData.value.imageUrl
         };

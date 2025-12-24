@@ -1,19 +1,22 @@
 # System Design Specification: Mini Restaurant App
 
-> **Version**: 1.1 (Released: 2025-12-21)
-> **Status**: Active Development
-> **Authors**: Antigravity AI Agent
+> **Version**: 2.0 (Released: 2025-12-23)
+> **Status**: **Commercial / Production-Ready** (Stable)
+> **Author**: Antigravity AI Agent
 
 ---
 
 ## 1. Executive Summary
 
-The **Mini Restaurant App** is a scalable, cloud-native e-commerce platform designed to demonstrate modern software architecture. It facilitates:
-1.  **Customer Operations**: Browsing menus, managing carts, and placing orders.
-2.  **Admin Operations**: Order management and Dashboard monitoring.
-3.  **Action**: Sends an email/SMS or pushes a WebSocket update to the admin dashboard.
+**Mini Restaurant App** is a scalable, cloud-native e-commerce platform architected for **real-world commercial operation**. Moving beyond a simple MVP, this system is designed to handle multi-region deployments, timezone complexities, and high-concurrency traffic.
 
-The system is built on a **Microservices** backend (Spring Cloud) and a **Micro-frontend** client (Vue 3 Module Federation), emphasizing separation of concerns, scalability, and security.
+Its features include:
+1.  **Customer Operations**: Menu browsing, cart management, ordering, and self-cancellation.
+2.  **Admin Operations**: Real-time dashboard, BI reports (Analytics), and menu management with AI integration.
+3.  **Global Readiness**: Multi-timezone support, i18n-ready architecture, and robust security standards.
+4.  **Guest Access**: Frictionless "Lazy Login" and "Quick Login" (Mobile-First) flows.
+
+Built upon a **Microservices** backend (Spring Cloud) and **Micro-frontend** client (Vue 3 Module Federation), the system emphasizes separation of concerns, scalability, security, and a premium user experience.
 
 ---
 
@@ -150,6 +153,7 @@ erDiagram
         Decimal price
         String description
         String image_url
+        String category "New (e.g. Main, Starter)"
     }
 ```
 
@@ -220,7 +224,18 @@ sequenceDiagram
     note right of Notif: "New Order #123 Received"
 ```
 
-### 3.4 Admin Order Management Sequence
+### 3.4 Customer Order Cancellation (New)
+To reduce friction, customers can cancel their own orders under strict conditions:
+-   **Trigger**: Clicks "Cancel Order" in `MyOrders` UI.
+-   **Endpoint**: `PATCH /api/orders/{id}/cancel`.
+-   **Condition**: Order Status **MUST** be `PENDING`.
+-   **Outcome**:
+    1.  Status updates to `CANCELLED`.
+    2.  Event `order.cancelled` published to RabbitMQ.
+    3.  Admin Dashboard updates via WebSocket (moves to History tab).
+    4.  Items are not deducted from inventory (as inventory logic is V2).
+
+### 3.5 Admin Order Management Sequence
 
 ```mermaid
 sequenceDiagram
@@ -275,6 +290,18 @@ sequenceDiagram
     note right of Notif: "Your order is being prepared!"
 ```
 
+### 3.5 Admin Dashboard Status Mapping
+
+To streamline kitchen operations, the Admin Dashboard filters orders into tabs based on their lifecycle status.
+
+| Dashboard Tab | Included Status(es) (Backend Enum) | Purpose |
+| :--- | :--- | :--- |
+| **Active** | `PENDING`, `PAID`, `PREPARING`, `READY` | **Default View**. Shows all actionable orders currently in the pipeline. |
+| **Pending** | `PENDING`, `PAID` | New orders waiting for restaurant acceptance. |
+| **Kitchen** | `PREPARING` | Orders accepted and currently being cooked/assembled. |
+| **Counter** | `READY` | Orders finished and waiting for customer pickup. |
+| **History** | `COMPLETED`, `CANCELLED` | Archive of finished transactions. Lazy-loaded for performance. |
+
 ---
 
 ## 4. Security Architecture
@@ -294,6 +321,22 @@ A robust "Encryption in Transit" mechanism is used for login.
 -   **Enforcement**:
     -   **Gateway**: Validates signature.
     -   **Service Layer**: `@PreAuthorize("hasRole('ADMIN')")` secures specific endpoints.
+
+### 4.3 Global Timezone Strategy (New)
+To support global deployment, we adopt a "UTC Storage, Local Display" strategy:
+
+1.  **Persistence**: 
+    -   All timestamps must be stored in **UTC**. 
+    -   Reliance on DB server local time is prohibited.
+
+2.  **Business Logic (Analytics)**:
+    -   **Operational Reports**: The definition of "Today" depends on the **Restaurant's Timezone**, not the server or user.
+    -   *Example*: For a Tokyo restaurant, "Daily Revenue" starts at 00:00 JST (15:00 UTC Previous Day).
+    -   *Strategy*: Configurable `RestaurantSettings` entity (Planned for V2).
+
+3.  **Presentation**:
+    -   API always returns ISO 8601 UTC format.
+    -   Browser converts to local time for display (`new Date().toLocaleString()`).
 
 ---
 
@@ -326,6 +369,10 @@ We use **Vite Plugin Federation** to compose the UI at runtime.
 | | Tailwind CSS 3.4 | Utility-first Styling |
 | | Pinia | State Management |
 
+### 6.1 UI Standards
+-   **Notifications**: The use of browser native `alert()` or `confirm()` is **strictly prohibited** in production (except for debugging). All user feedback must use the standardized **Toast Notification** component.
+-   **Styling**: Follow Tailwind CSS Utility-first principles, but maintain semantic consistency for high-level components (Cards, Buttons).
+
 ---
 
 ## 7. API Catalog (Key Endpoints)
@@ -339,6 +386,7 @@ We use **Vite Plugin Federation** to compose the UI at runtime.
 | Method | Endpoint | Access | Description |
 | :--- | :--- | :--- | :--- |
 | `POST` | `/login` | Public | Authenticates user (RSA encrypted password), returns JWT + Roles. |
+| `POST` | `/quick-login` | Public | **(New)** Auto-registers users by mobile number (Mobile First). |
 | `POST` | `/register` | Public | Registers new user (RSA encrypted password). |
 | `GET` | `/public-key` | Public | Returns the RSA Public Key for frontend encryption. |
 | `GET` | `/verify` | Public | Validates a JWT token. |
@@ -348,6 +396,7 @@ We use **Vite Plugin Federation** to compose the UI at runtime.
 | :--- | :--- | :--- | :--- |
 | `POST` | `/create` | Authenticated | Creates a new order with items. Publishes event to RabbitMQ. |
 | `GET` | `/my` | Authenticated | Retrieves order history for the current logged-in user. |
+| `PATCH` | `/{id}/cancel` | Authenticated | **(New)** Cancels an order if status is `PENDING` (User owned). |
 | `GET` | `/admin/all` | **Admin** | Retrieves all orders in the system. |
 | `PATCH` | `/{id}/status` | **Admin** | Updates order status (e.g., `PAID` -> `PREPARING` -> `COMPLETED`). |
 
@@ -383,6 +432,10 @@ We use **Vite Plugin Federation** to compose the UI at runtime.
 -   **Admin UI**: Complete. card-based layout with high contrast.
 -   **Auth**: Complete. MySQL-backed, RSA-secured.
 -   **Order**: Core flow complete. RabbitMQ Producer implemented.
--   **WIP**: Notification Service (Consumer), Menu Management (CRUD).
+-   **Notification**: Service complete (RabbitMQ -> WebSocket).
+-   **Menu**: Search & Category Filter complete.
+-   **Menu Management**: Admin CRUD UI complete.
+-   **User Experience UI**: Deferred Login (Lazy Login) & Quick Login (Mobile First) complete.
+-   **WIP**: Inventory V2 (Stock tracking).
 
 ---

@@ -17,6 +17,12 @@ public class Order {
     private String userId; // From X-User-Id header
     private BigDecimal totalPrice;
     private String status; // PENDING, COMPLETED, etc.
+
+    @Enumerated(EnumType.STRING)
+    private OrderType orderType;
+
+    private String tableNumber;
+
     private LocalDateTime createdAt = LocalDateTime.now();
 
     @OneToMany(mappedBy = "order", cascade = CascadeType.ALL)

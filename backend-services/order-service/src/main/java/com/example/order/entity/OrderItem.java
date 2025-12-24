@@ -20,4 +20,5 @@ public class OrderItem {
     private String snapshotName;
     private BigDecimal snapshotPrice;
     private Integer quantity;
+    private String notes;
 }
