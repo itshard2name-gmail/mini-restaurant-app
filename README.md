@@ -112,16 +112,15 @@ The system comes with pre-seeded accounts (see `auth-service/src/main/resources/
 | **Customer** | `customer` | `123456` | Access to Storefront, Cart, and Order History. |
 
 ### 4.2 Customer Journey (Storefront)
-1.  **Login**: Go to `http://localhost:3000`. You will be redirected to `/login`. Use the **Customer** credentials.
-2.  **Browse Menu**: You will see the "Menu" page with available food items.
-3.  **Add to Cart**: Click "Add to Cart" on any item. A notification will confirm the action.
+1.  **Select Mode**: Choose between **Takeout** or **Dine-in** on the welcome screen.
+2.  **Browse Menu**: View available items (Dine-in mode shows Table Number).
+3.  **Add to Cart**: Add items to your cart.
 4.  **Checkout**:
-    -   Open the Cart (top-right icon or bottom sheet on mobile).
-    -   Review items and total price.
-    -   Click "Checkout".
-5.  **View History**: Go to "My Orders" via the Navbar profile menu.
-    -   **Cancel Order**: If your order is still `PENDING` (not yet accepted/paid), you can click "Cancel Order" to instantly cancel it.
-    -   **Track**: Watch status update from `PENDING` -> `PREPARING` -> `READY`.
+    -   **Takeout**: Proceed to checkout -> Redirect to Login -> **Quick Login** (Mobile Number) -> Return to Cart -> Pay Now.
+    -   **Dine-in**: Select Table -> Proceed to checkout -> **Instant Order** (No Login required).
+5.  **View History** (Logged-in only): Go to "My Orders" via the profile menu.
+    -   **Cancel Order**: Click "Cancel Order" on `PENDING` orders.
+    -   **Track**: Watch status updates (`PENDING` -> `PREPARING` -> `READY`).
 
 ### 4.3 Administrator Journey (Dashboard)
 1.  **Login**: Logout and sign in with the **Administrator** credentials.
