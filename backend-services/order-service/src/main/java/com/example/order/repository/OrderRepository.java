@@ -2,7 +2,7 @@ package com.example.order.repository;
 
 import com.example.order.entity.Order;
 import org.springframework.data.jpa.repository.JpaRepository;
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.math.BigDecimal;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -20,20 +20,22 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
         // Analytics
 
         @Query("SELECT SUM(o.totalPrice) FROM Order o WHERE o.createdAt >= :date")
-        BigDecimal sumTotalPriceAfter(@Param("date") LocalDateTime date);
+        BigDecimal sumTotalPriceAfter(@Param("date") Instant date);
 
         @Query("SELECT COUNT(o) FROM Order o WHERE o.createdAt >= :date")
-        Long countOrdersAfter(@Param("date") LocalDateTime date);
+        Long countOrdersAfter(@Param("date") Instant date);
 
         @Query("SELECT COUNT(o) FROM Order o WHERE o.status IN :statuses")
         Long countOrdersByStatus(@Param("statuses") List<String> statuses);
 
         // Group By Date: Returns [Date(String), TotalRevenue(BigDecimal), Count(Long)]
+        // NOTE: DATE_FORMAT on Instant (UTC) works, but groups by UTC Date.
+        // Ideal long term is CONVERT_TZ, but for MVP this ensures strict UTC grouping.
         @Query("SELECT FUNCTION('DATE_FORMAT', o.createdAt, '%Y-%m-%d') as date, SUM(o.totalPrice), COUNT(o) " +
                         "FROM Order o WHERE o.createdAt >= :date " +
                         "GROUP BY FUNCTION('DATE_FORMAT', o.createdAt, '%Y-%m-%d') " +
                         "ORDER BY date ASC")
-        List<Object[]> getDailyRevenueTrends(@Param("date") LocalDateTime date);
+        List<Object[]> getDailyRevenueTrends(@Param("date") Instant date);
 
         // Top Items: Returns [ItemName(String), TotalQuantity(Long)]
         @Query("SELECT oi.snapshotName, SUM(oi.quantity) " +
@@ -47,7 +49,7 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
         @Query("SELECT o.orderType, COUNT(o), SUM(o.totalPrice) " +
                         "FROM Order o WHERE o.createdAt >= :date " +
                         "GROUP BY o.orderType")
-        List<Object[]> getOrderDistribution(@Param("date") LocalDateTime date);
+        List<Object[]> getOrderDistribution(@Param("date") Instant date);
 
         // Phase 20: Server-Side Search & Pagination
         @Query("SELECT o FROM Order o WHERE " +

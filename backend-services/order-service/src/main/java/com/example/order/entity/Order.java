@@ -3,7 +3,7 @@ package com.example.order.entity;
 import jakarta.persistence.*;
 import lombok.Data;
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.List;
 
 @Entity
@@ -23,7 +23,7 @@ public class Order {
 
     private String tableNumber;
 
-    private LocalDateTime createdAt = LocalDateTime.now();
+    private java.time.Instant createdAt = java.time.Instant.now();
 
     @OneToMany(mappedBy = "order", cascade = CascadeType.ALL)
     private List<OrderItem> items;

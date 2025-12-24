@@ -4,9 +4,11 @@ import com.example.order.repository.OrderRepository;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.web.bind.annotation.*;
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
+import java.time.Instant;
+import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.ZoneId;
+import java.time.ZonedDateTime;
 import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -32,7 +34,7 @@ public class AnalyticsController {
         // 1. Get Target Timezone
         String timeZoneId = settingsRepository.findBySettingKey("TIMEZONE")
                 .map(s -> s.getSettingValue())
-                .orElse("UTC"); // Default to UTC if missing
+                .orElse("UTC");
 
         ZoneId zoneId;
         try {
@@ -41,20 +43,15 @@ public class AnalyticsController {
             zoneId = ZoneId.of("UTC");
         }
 
-        // 2. Calculate Start of Day in Target Zone
-        LocalDateTime nowInTargetZone = LocalDateTime.now(zoneId);
-        LocalDateTime startOfDayInTargetZone = nowInTargetZone.with(LocalTime.MIN);
-
-        // 3. Convert back to UTC for DB Query
-        // We need to convert startOfDayInTargetZone (e.g. 00:00 Taipei) -> UTC Instanct
-        // -> UTC LocalDateTime
-        LocalDateTime startOfDayUTC = startOfDayInTargetZone.atZone(zoneId)
-                .withZoneSameInstant(ZoneId.of("UTC"))
-                .toLocalDateTime();
+        // 2. Calculate Start of Day in Target Zone -> UTC Instant
+        // Example: If Timezone is Taipei (+08:00), "Today" starts at 00:00 Taipei.
+        // This is 16:00 Yesterday in UTC.
+        Instant startOfDayUTC = ZonedDateTime.now(zoneId)
+                .with(LocalTime.MIN)
+                .toInstant();
 
         System.out.println("DEBUG ANALYTICS: Restaurant Timezone = " + timeZoneId);
-        System.out.println("DEBUG ANALYTICS: StartOfDay (Local) = " + startOfDayInTargetZone);
-        System.out.println("DEBUG ANALYTICS: StartOfDay (UTC for DB) = " + startOfDayUTC);
+        System.out.println("DEBUG ANALYTICS: StartOfDay (UTC Instant) = " + startOfDayUTC);
 
         BigDecimal todayRevenue = orderRepository.sumTotalPriceAfter(startOfDayUTC);
         Long todayOrders = orderRepository.countOrdersAfter(startOfDayUTC);
@@ -68,7 +65,14 @@ public class AnalyticsController {
 
     @GetMapping("/trends")
     public List<TrendResponse> getTrends() {
-        LocalDateTime sevenDaysAgo = LocalDateTime.now().minusDays(7).with(LocalTime.MIN);
+        // For trends (last 7 days), we want strictly UTC days for now as the SQL GROUP
+        // BY uses UTC date.
+        // In a future phase, we should inject the timezone into the SQL.
+        Instant sevenDaysAgo = ZonedDateTime.now(ZoneId.of("UTC"))
+                .minusDays(7)
+                .with(LocalTime.MIN)
+                .toInstant();
+
         List<Object[]> rawData = orderRepository.getDailyRevenueTrends(sevenDaysAgo);
 
         return rawData.stream()
@@ -128,7 +132,7 @@ public class AnalyticsController {
 
     @GetMapping("/distribution")
     public List<DistributionResponse> getDistribution() {
-        // 1. Get Target Timezone (Same logic as summary)
+        // 1. Get Target Timezone
         String timeZoneId = settingsRepository.findBySettingKey("TIMEZONE")
                 .map(s -> s.getSettingValue())
                 .orElse("UTC");
@@ -140,11 +144,9 @@ public class AnalyticsController {
             zoneId = ZoneId.of("UTC");
         }
 
-        // Start of Day in Local -> UTC
-        LocalDateTime startOfDayUTC = LocalDateTime.now(zoneId).with(LocalTime.MIN)
-                .atZone(zoneId)
-                .withZoneSameInstant(ZoneId.of("UTC"))
-                .toLocalDateTime();
+        Instant startOfDayUTC = ZonedDateTime.now(zoneId)
+                .with(LocalTime.MIN)
+                .toInstant();
 
         List<Object[]> rawData = orderRepository.getOrderDistribution(startOfDayUTC);
 

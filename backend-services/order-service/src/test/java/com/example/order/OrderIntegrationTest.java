@@ -20,6 +20,10 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 @SpringBootTest
 @AutoConfigureMockMvc
+@org.springframework.test.context.TestPropertySource(properties = {
+        "app.jwt.secret=very-long-test-secret-key-for-jwt-signing-and-verification-purposes-1234567890",
+        "spring.jpa.hibernate.ddl-auto=create-drop"
+})
 public class OrderIntegrationTest {
 
     @Autowired
@@ -31,18 +35,30 @@ public class OrderIntegrationTest {
     @Autowired
     private ObjectMapper objectMapper;
 
+    @Autowired
+    private com.example.order.repository.MenuRepository menuRepository;
+
     @Test
     @WithMockUser(username = "customer", roles = "USER")
     public void testCreateOrderFlow() throws Exception {
+        // Seed Data
+        com.example.order.entity.Menu menu = new com.example.order.entity.Menu();
+        menu.setName("Test Burger");
+        menu.setPrice(new java.math.BigDecimal("10.00"));
+        menu.setDescription("Delicious");
+        menu.setImageUrl("http://img.com/burger.png");
+        com.example.order.entity.Menu savedMenu = menuRepository.save(menu);
+
         // Prepare Request
         CreateOrderRequest request = new CreateOrderRequest();
         OrderItemRequest item = new OrderItemRequest();
-        item.setMenuId(1L); // Assuming ID 1 exists from seed/data.sql
+        item.setMenuId(savedMenu.getId()); // Use dynamic ID
         item.setQuantity(2);
         request.setItems(Collections.singletonList(item));
 
         // Execute Post
-        mockMvc.perform(post("/api/orders/create")
+        mockMvc.perform(post("/orders")
+                .header("X-User-Id", "123")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isOk());
