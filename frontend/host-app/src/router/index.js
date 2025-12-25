@@ -1,5 +1,6 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import Login from '../components/Login.vue'
+import StaffLogin from '../components/StaffLogin.vue'
 import { defineAsyncComponent } from 'vue'
 
 // Basic error boundary for remote components
@@ -28,6 +29,7 @@ const AdminDashboard = defineAsyncComponent(() =>
 const routes = [
     { path: '/', redirect: '/menu' },
     { path: '/login', component: Login, meta: { guest: true } },
+    { path: '/staff/login', component: StaffLogin, meta: { guest: true } },
     { path: '/menu', component: MenuList, meta: { requiresAuth: false } },
     { path: '/my-orders', component: MyOrders, meta: { requiresAuth: false } }, // Allowed for Guest Tokens too
     { path: '/admin', component: AdminDashboard, meta: { requiresAuth: true, roles: ['ROLE_ADMIN'] } }
@@ -47,6 +49,10 @@ router.beforeEach((to, from, next) => {
     // Check if route requires auth
     if (to.meta.requiresAuth) {
         if (!token) {
+            // Redirect to Staff Login if checking Admin pages
+            if (to.path.startsWith('/admin') || (toRoles && toRoles.includes('ROLE_ADMIN'))) {
+                return next('/staff/login');
+            }
             return next('/login');
         }
 

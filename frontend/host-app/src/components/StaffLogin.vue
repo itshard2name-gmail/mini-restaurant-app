@@ -1,6 +1,7 @@
 <script setup>
 import { ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
+import { encrypt } from '../utils/encryption';
 import request from '../utils/request';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -10,7 +11,8 @@ import { Label } from '@/components/ui/label';
 const router = useRouter();
 const route = useRoute();
 
-const phone = ref('');
+const username = ref('');
+const password = ref('');
 const errorMsg = ref('');
 const isLoading = ref(false);
 
@@ -25,35 +27,38 @@ const handleResponse = (res) => {
             // RBAC Redirect logic
             const redirectPath = route.query.redirect;
             
-            if (redirectPath && redirectPath !== '/login') {
+            if (redirectPath && redirectPath !== '/staff/login') {
                  router.push(redirectPath);
             } else {
-                router.push('/menu');
+                // Default staff landing
+                router.push('/admin');
             }
         } else {
-            // Fallback
+            // Fallback (though staff should have roles)
             localStorage.setItem('roles', '[]');
-            router.push('/menu');
+            router.push('/admin');
         }
     }
 };
 
-const handleQuickLogin = async () => {
-    if (!phone.value) {
-        errorMsg.value = "Please enter your mobile number";
-        return;
-    }
-    
+const handleLogin = async () => {
     isLoading.value = true;
     errorMsg.value = '';
-
+    
     try {
-        const res = await request.post('/auth/quick-login', {
-            phone: phone.value
+        const encryptedPassword = await encrypt(password.value);
+        if(!encryptedPassword) {
+            errorMsg.value = "Encryption failed";
+            return;
+        }
+
+        const res = await request.post('/auth/login', {
+            username: username.value,
+            password: encryptedPassword
         });
         handleResponse(res);
     } catch (e) {
-        errorMsg.value = "Quick Login failed. Please try again.";
+        errorMsg.value = "Login failed: Invalid credentials";
         console.error(e);
     } finally {
         isLoading.value = false;
@@ -67,27 +72,29 @@ const handleQuickLogin = async () => {
      
      <Card class="w-full max-w-md z-10 shadow-xl border-t-4 border-t-primary">
          <CardHeader class="space-y-1 pb-6">
-             <CardTitle class="text-2xl font-bold text-center">Welcome</CardTitle>
+             <CardTitle class="text-2xl font-bold text-center">Staff Login</CardTitle>
              <CardDescription class="text-center">
-                 Sign in to continue your order
+                 Authorized personnel only
              </CardDescription>
          </CardHeader>
-         
+
          <CardContent class="grid gap-4">
-             <!-- Customer Login Form -->
              <div class="space-y-4">
                  <div class="grid gap-2">
-                     <Label htmlFor="phone">Mobile Number</Label>
+                     <Label htmlFor="username">Username</Label>
+                     <Input id="username" v-model="username" type="text" placeholder="admin" />
+                 </div>
+                 <div class="grid gap-2">
+                     <Label htmlFor="password">Password</Label>
                      <Input 
-                        id="phone" 
-                        v-model="phone" 
-                        type="tel" 
-                        placeholder="0912345678" 
-                        @keyup.enter="handleQuickLogin"
+                        id="password" 
+                        v-model="password" 
+                        type="password" 
+                        @keyup.enter="handleLogin"
                      />
                  </div>
-                 <Button class="w-full bg-primary hover:bg-primary/90" @click="handleQuickLogin" :disabled="isLoading">
-                    {{ isLoading ? 'Processing...' : 'Track Order / Quick Login' }}
+                 <Button class="w-full bg-primary hover:bg-primary/90" @click="handleLogin" :disabled="isLoading">
+                    {{ isLoading ? 'Logging in...' : 'Login' }}
                  </Button>
              </div>
              

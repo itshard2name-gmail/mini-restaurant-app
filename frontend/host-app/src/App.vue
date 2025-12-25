@@ -9,8 +9,14 @@ const isAdmin = ref(false);
 const isMenuOpen = ref(false);
 
 const handleLogout = () => {
+  const wasAdmin = isAdmin.value;
   localStorage.clear(); // Clear token AND cart state
-  router.push('/login');
+  
+  if (wasAdmin) {
+    router.push('/staff/login');
+  } else {
+    router.push('/login');
+  }
 };
 
 const checkRole = () => {
