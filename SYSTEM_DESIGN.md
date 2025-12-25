@@ -338,6 +338,67 @@ To support global deployment, we adopt a "UTC Storage, Local Display" strategy:
     -   API always returns ISO 8601 UTC format.
     -   Browser converts to local time for display (`new Date().toLocaleString()`).
 
+### 4.4 Deep Dive: Timezone Data Flow (Frontend <-> Backend <-> DB)
+
+A common challenge in distributed systems is ensuring time consistency across different computing environments. We resolved this by standardizing on `Instant` for backend entities instead of `LocalDateTime`.
+
+#### The "LocalDateTime" Pitfall
+`LocalDateTime` represents "Wall Clock" time (e.g., "10:00 AM") without any timezone context.
+- **Ambiguity**: When the frontend sends `2025-12-25T10:00:00Z` (UTC), parsing it into `LocalDateTime` strips the `Z` (UTC marker).
+- **Data Corruption**: If the Database Server is in `UTC+8`, saving "10:00" might be interpreted by the driver as "10:00 Taiwan Time" rather than "10:00 UTC", resulting in an 8-hour offset error.
+
+#### The "Instant" Solution
+`Instant` represents a specific, absolute point on the universal timeline.
+- **Precision**: It explicitly handles the timestamp as a UTC moment.
+- **Safety**: The JDBC Driver, recognizing `Instant`, handles the necessary conversion to the database's native storage format (e.g., `TIMESTAMP`) while preserving the exact moment in time, regardless of the server's local timezone settings.
+
+#### Interaction Diagram
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant FE as Frontend (Browser)
+    participant JSON as JSON Parser (Jackson)
+    participant BE as Backend (Java Code)
+    participant JDBC as JDBC Driver
+    participant DB as MySQL Database
+
+    Note over FE: User in Taiwan (UTC+8)<br/>Selects Time: 18:00 (6 PM)
+
+    FE->>FE: Convert to ISO String (UTC)<br/>18:00 (TW) -> 10:00 (UTC)<br/>String: "2025-12-25T10:00:00Z"
+    FE->>BE: Send API Request: { "date": "2025-12-25T10:00:00Z" }
+
+    rect rgb(255, 240, 240)
+    Note right of FE: Before Fix: Using LocalDateTime
+    BE->>JSON: Parse JSON
+    JSON-->>BE: Result: LocalDateTime<br/>Value: "2025-12-25T10:00:00"<br/>❌ "Z" is lost (Relative Time)
+    
+    BE->>JDBC: Prepare SQL Insert
+    Note right of BE: Ambiguous Semantic:<br/>Backend only provides numeric "10:00"
+    
+    JDBC->>DB: Execute INSERT
+    Note right of DB: 😱 Error Potential:<br/>MySQL receives "10:00".<br/>If DB session is UTC+8,<br/>it stores as "10:00 (TW time)".<br/>(Actual instant shifts to UTC 02:00)
+    end
+
+    rect rgb(230, 255, 230)
+    Note right of FE: After Fix: Using Instant
+    BE->>JSON: Parse JSON
+    JSON-->>BE: Result: Instant<br/>Value: "2025-12-25T10:00:00Z"<br/>✅ Locked to UTC absolute moment
+    
+    BE->>JDBC: Prepare SQL Insert
+    Note right of BE: Precise Semantic:<br/>"This is UTC 10:00"
+    
+    JDBC->>DB: Execute INSERT
+    Note right of DB: 😃 Correct Conversion:<br/>JDBC Driver recognizes Instant.<br/>It guarantees the stored time<br/>equals UTC 10:00.
+    end
+
+    Note over DB, FE: Read Flow (Instant)
+    DB->>JDBC: Read Data (TIMESTAMP)
+    JDBC->>BE: Convert to Instant (UTC 10:00Z)
+    BE->>FE: Return JSON "2025-12-25T10:00:00Z"
+    FE->>FE: Browser converts to Local Time (18:00)
+```
+
 ---
 
 ## 5. Micro-Frontends (Module Federation)

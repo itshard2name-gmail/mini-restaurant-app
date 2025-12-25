@@ -338,6 +338,67 @@ sequenceDiagram
     -   API 一律回傳 ISO 8601 UTC 格式 (e.g., `2023-12-23T10:00:00Z`)。
     -   瀏覽器根據使用者本地設定將其轉換為當地時間顯示 (`new Date().toLocaleString()`)。
 
+### 4.4 深入探討：時區資料流 (Frontend <-> Backend <-> DB)
+
+在分散式系統中，確保各種運算環境下的時間一致性是一大挑戰。我們解決此問題的方法是：後端實體全面標準化使用 `Instant`，而非 `LocalDateTime`。
+
+#### "LocalDateTime" 的陷阱
+`LocalDateTime` 代表的是「牆鐘時間 (Wall Clock)」(例如 "10:00 AM")，它不包含任何時區情境。
+- **歧義性**: 當前端發送 `2025-12-25T10:00:00Z` (UTC) 時，將其解析為 `LocalDateTime` 會導致 `Z` (UTC 標記) 被剝離。
+- **資料損壞**: 如果資料庫伺服器位於 `UTC+8`，儲存數字 "10:00" 可能被 JDBC Driver 解讀為「台灣時間 10:00」，而非原本的「UTC 10:00」，從而導致 8 小時的偏差錯誤。
+
+#### "Instant" 的解法
+`Instant` 代表的是宇宙時間軸上的一個絕對點。
+- **精確性**: 它明確地將時間戳記處理作 UTC 的一個時刻。
+- **安全性**: JDBC Driver 一旦識別出 `Instant`，便會處理必要的轉換，將其轉換為資料庫的原生儲存格式 (如 `TIMESTAMP`)，並在轉換過程中保留確切的時間點，無論伺服器的本地時區設定為何。
+
+#### 互動流程圖
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant FE as Frontend (Browser)
+    participant JSON as JSON Parser (Jackson)
+    participant BE as Backend (Java Code)
+    participant JDBC as JDBC Driver
+    participant DB as MySQL Database
+
+    Note over FE: 使用者在台灣 (UTC+8)<br/>選擇時間: 18:00 (晚上6點)
+
+    FE->>FE: 轉換為 ISO String (UTC)<br/>18:00 (TW) -> 10:00 (UTC)<br/>字串: "2025-12-25T10:00:00Z"
+    FE->>BE: 發送 API請求: { "date": "2025-12-25T10:00:00Z" }
+
+    rect rgb(255, 240, 240)
+    Note right of FE: 修復前：使用 LocalDateTime
+    BE->>JSON: 解析 JSON
+    JSON-->>BE: 產出 LocalDateTime<br/>值為 "2025-12-25T10:00:00"<br/>❌ "Z" 被無視，變成了「相對時間」
+    
+    BE->>JDBC: 準備存入 DB
+    Note right of BE: 這裡語意模糊：<br/>後端只給了 "10:00" 這個數字
+    
+    JDBC->>DB: 執行 INSERT
+    Note right of DB: 😱 錯誤發生點：<br/>MySQL 收到 "10:00"。<br/>若 DB session 是 UTC+8，<br/>它可能將其存為 "10:00 (TW time)"。<br/>(實際時間點變成了 UTC 02:00，差了8小時)
+    end
+
+    rect rgb(230, 255, 230)
+    Note right of FE: 修復後：使用 Instant
+    BE->>JSON: 解析 JSON
+    JSON-->>BE: 產出 Instant<br/>值為 "2025-12-25T10:00:00Z"<br/>✅ 鎖定為 UTC 絕對時刻
+    
+    BE->>JDBC: 準備存入 DB
+    Note right of BE: 語意精確：<br/>"這是 UTC 的 10:00"
+    
+    JDBC->>DB: 執行 INSERT
+    Note right of DB: 😃 正確轉換：<br/>JDBC Driver 知道這是 Instant。<br/>它會根據與 DB 的協定，<br/>確保寫入的時間點等同於 UTC 10:00。<br/>(若 DB 存 TIMESTAMP，就是 UTC 10:00)
+    end
+
+    Note over DB, FE: 讀取流程 (Instant)
+    DB->>JDBC: 讀取資料 (TIMESTAMP/DATETIME)
+    JDBC->>BE: 轉換回 Instant (UTC 10:00Z)
+    BE->>FE: 回傳 JSON "2025-12-25T10:00:00Z"
+    FE->>FE: 瀏覽器轉回本地時間顯示 (18:00)
+```
+
 ---
 
 ## 5. 微前端 (Micro-Frontends: Module Federation)
