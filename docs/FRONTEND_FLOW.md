@@ -15,7 +15,7 @@ This document analyzes the navigation logic for the Mini Restaurant App, coverin
 ```mermaid
 stateDiagram-v2
     classDef shared fill:#ffea00,color:#000,stroke:#fbc02d,stroke-width:2px;
-    classDef admin fill:#e1bee7,color:#000,stroke:#8e24aa,stroke-width:2px;
+    classDef admin fill:#332042,color:#fff,stroke:#8e24aa,stroke-width:2px;
     classDef user fill:#b3e5fc,color:#000,stroke:#0277bd,stroke-width:2px;
 
     [*] --> Root: /
