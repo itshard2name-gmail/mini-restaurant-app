@@ -118,3 +118,13 @@ Please execute the following paths to verify navigation integrity:
 2.  **[Dash Tabs]**: Click "Menu Management" tab -> Verify component switch (No URL change).
 3.  **[Unauthorized Access]**: Login as User -> Manually type `/admin` -> Verify alert + redirect to `/menu`.
 4.  **[Zombie Check]**: From `/menu`, click `/admin` (as Admin) -> Verify Page Reload (observable flicker) due to Zombie Fix.
+
+## 6. Test Accounts
+
+Use the following credentials for Playwright automation scripts:
+
+| Role | Username / Identifier | Password | Notes |
+| :--- | :--- | :--- | :--- |
+| **Admin** | `admin` | `123456` | Full access to Admin Dashboard |
+| **Customer (Dine-in)** | N/A | N/A | Logged out state, Table QR scan flow |
+| **Customer (Takeout)** | `0955983983` | N/A | Mobile Number Quick Login |
