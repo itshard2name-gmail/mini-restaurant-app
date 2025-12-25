@@ -164,6 +164,14 @@ cd frontend/sub-app-admin && npm run preview
 
 ## 6. 開發指南 (Development Guidelines)
 
+### 6.1 程式碼規範 (Coding Standards) - 重要
+為了確保系統穩定性與資料一致性，以下規則為 **強制性 (MANDATORY)**：
+
+-   **時區處理 (Timezone Handling)**:
+    -   **必須 (MUST)**: 所有實體的時間戳記欄位 (e.g., `createdAt`, `updatedAt`) 一律使用 `java.time.Instant`。
+    -   **禁止 (FORBIDDEN)**: 嚴格禁止使用 `LocalDateTime` 進行資料持久化，以避免時區偏差錯誤。
+    -   **API 標準**: JSON 回應中的所有日期時間欄位必須符合 ISO 8601 UTC 格式 (以 `Z` 結尾)。
+
 請參閱 [SYSTEM_DESIGN.md](./SYSTEM_DESIGN.md) 以獲取：
 - 🛠 **技術棧 (Technology Stack)** 版本
 - 🔐 **安全架構** 細節

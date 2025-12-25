@@ -322,10 +322,12 @@ sequenceDiagram
     -   **Gateway**: 驗證簽章。
     -   **Service Layer**: `@PreAuthorize("hasRole('ADMIN')")` 保護特定 Endpoints。
 
-### 4.3 時區策略 (Global Timezone Strategy)
-鑑於系統將面向全球，我們採用 "UTC Storage, Local Display" 策略：
+### 4.3 時區策略 (Global Timezone Strategy) - 嚴格執行
+鑑於系統將面向全球，我們採用 "UTC Storage, Local Display" 策略並 **嚴格強制執行類型檢查**：
 
 1.  **資料儲存 (Persistence)**:
+    -   **嚴格規則**: 實體 **必須 (MUST)** 使用 `java.time.Instant` 作為所有時間戳記欄位。
+    -   **禁止**: 嚴格禁止使用 `LocalDateTime` 進行持久化。
     -   所有時間戳記 (TimeStamp) 在資料庫中一律儲存為 **UTC**。
     -   禁止依賴資料庫伺服器的本地時間。
 

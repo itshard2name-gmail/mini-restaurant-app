@@ -164,6 +164,14 @@ The dashboard organizes orders using the following logic:
 
 ## 6. Development Guidelines
 
+### 6.1 Coding Standards (Critical)
+To ensure system stability and data integrity, the following rules are **MANDATORY**:
+
+-   **Timezone Handling**:
+    -   **MUST** use `java.time.Instant` for all Entity timestamps (e.g., `createdAt`, `updatedAt`).
+    -   **FORBIDDEN**: The use of `LocalDateTime` for persistence is strictly prohibited to prevent timezone offset errors.
+    -   **API Standard**: All date-time fields in JSON responses must be in ISO 8601 UTC format (ends with `Z`).
+
 Please refer to [SYSTEM_DESIGN.md](./SYSTEM_DESIGN.md) for:
 - 🛠 **Technology Stack** versions
 - 🔐 **Security Architecture** details

@@ -322,10 +322,12 @@ A robust "Encryption in Transit" mechanism is used for login.
     -   **Gateway**: Validates signature.
     -   **Service Layer**: `@PreAuthorize("hasRole('ADMIN')")` secures specific endpoints.
 
-### 4.3 Global Timezone Strategy (New)
-To support global deployment, we adopt a "UTC Storage, Local Display" strategy:
+### 4.3 Global Timezone Strategy (Strict Enforcement)
+To support global deployment, we adopt a "UTC Storage, Local Display" strategy with **strict type enforcement**:
 
 1.  **Persistence**: 
+    -   **Strict Rule**: Entities **MUST** use `java.time.Instant` for all timestamp fields.
+    -   **Forbidden**: `LocalDateTime` is strictly prohibited for persistence.
     -   All timestamps must be stored in **UTC**. 
     -   Reliance on DB server local time is prohibited.
 
