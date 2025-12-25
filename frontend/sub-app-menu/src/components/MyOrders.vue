@@ -249,17 +249,19 @@ let stompClient = null;
 
 const connectWebSocket = () => {
     const token = localStorage.getItem('token');
+    const guestId = localStorage.getItem('guest_order_id');
     let userId = 'admin';
+
     if (token) {
         try {
             const payload = JSON.parse(atob(token.split('.')[1]));
             userId = payload.sub || 'admin';
         } catch(e) {}
-    } else {
-        return; 
+    } else if (!guestId) {
+        return; // Neither User nor Guest
     }
 
-    console.log('Connecting to WebSocket for user:', userId);
+    console.log('Connecting to WebSocket. Token:', !!token, 'GuestID:', guestId);
     
     // Updated to use Gateway Port (8088) mapped in Docker
     // Removed SockJS to align with Admin App and Gateway configuration
@@ -270,15 +272,38 @@ const connectWebSocket = () => {
         },
         onConnect: () => {
             console.log('Connected to WebSocket (Customer View)');
-            stompClient.subscribe(`/topic/orders/user/${userId}`, (message) => {
-                if (message.body) {
-                    console.log('Received order update:', message.body);
-                    fetchActiveOrders(); 
-                    if (currentTab.value === 'history') {
-                         fetchHistoryOrders(true); 
+            
+            if (token) {
+                // Registered User: Subscribe to their private queue
+                stompClient.subscribe(`/topic/orders/user/${userId}`, (message) => {
+                    if (message.body) {
+                        console.log('Received user order update:', message.body);
+                        fetchActiveOrders(); 
+                        if (currentTab.value === 'history') {
+                            fetchHistoryOrders(true); 
+                        }
                     }
-                }
-            });
+                });
+            } else if (guestId) {
+                // Guest User: Subscribe to global updates but FILTER locally
+                stompClient.subscribe('/topic/orders', (message) => {
+                    if (message.body) {
+                        try {
+                            const updatedOrder = JSON.parse(message.body);
+                            const msgOrderId = updatedOrder.orderId || updatedOrder.id; // Handle both cases for robustness
+                            console.log('Guest received broadcast. MsgID:', msgOrderId, 'MyID:', guestId);
+                            
+                            // Loose comparison string/number just in case
+                            if (msgOrderId && msgOrderId == guestId) {
+                                console.log('Update matches Guest Order. Refreshing...');
+                                fetchActiveOrders();
+                            }
+                        } catch (e) {
+                            console.error('Failed to parse websocket message', e);
+                        }
+                    }
+                });
+            }
         },
         onStompError: (frame) => {
             console.error('Broker reported error: ' + frame.headers['message']);
