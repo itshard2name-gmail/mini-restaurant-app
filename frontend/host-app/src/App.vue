@@ -46,7 +46,7 @@ onMounted(() => {
 
 <template>
   <div class="bg-gray-100 min-h-screen">
-    <nav class="bg-gradient-to-r from-orange-500 to-red-600 shadow-lg p-4 mb-4 sticky top-0 z-[500] w-full">
+    <nav v-if="!$route.meta.hideNavbar" class="bg-gradient-to-r from-orange-500 to-red-600 shadow-lg p-4 mb-4 sticky top-0 z-[500] w-full">
       <div class="max-w-7xl mx-auto flex justify-between items-center">
         <div class="flex items-center gap-3">
           <!-- Logo Icon -->

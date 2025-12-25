@@ -1,4 +1,4 @@
-import './style.css'
+// import './style.css' // Disabled to prevent global style pollution in Micro-frontends (Admin/Host conflict)
 export { default as AspectRatio } from './components/aspect-ratio/AspectRatio.vue'
 export { default as Badge } from './components/badge/Badge.vue'
 export { default as Button } from './components/button/Button.vue'

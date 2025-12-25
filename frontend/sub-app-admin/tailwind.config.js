@@ -2,7 +2,7 @@
 export default {
 	darkMode: ["class"],
 	darkMode: ["class"],
-	// important: '#admin-wrapper', // Reverted to fix missing utilities issue
+	important: '#admin-wrapper', // Scope all styles to this ID
 	content: [
 		"./index.html",
 		"./src/**/*.{vue,js,ts,jsx,tsx}",
@@ -10,53 +10,57 @@ export default {
 	// Safelist dynamic classes (patterns are safer)
 	// Safelist removed - using shared UI
 	safelist: [],
+	// Disable preflight to avoid global style pollution in micro-frontend
+	corePlugins: {
+		preflight: false,
+	},
 	theme: {
 		extend: {
 			borderRadius: {
-				lg: 'var(--radius)',
-				md: 'calc(var(--radius) - 2px)',
-				sm: 'calc(var(--radius) - 4px)'
+				lg: 'var(--admin-radius)',
+				md: 'calc(var(--admin-radius) - 2px)',
+				sm: 'calc(var(--admin-radius) - 4px)'
 			},
 			colors: {
-				background: 'hsl(var(--background))',
-				foreground: 'hsl(var(--foreground))',
+				background: 'hsl(var(--admin-background))',
+				foreground: 'hsl(var(--admin-foreground))',
 				card: {
-					DEFAULT: 'hsl(var(--card))',
-					foreground: 'hsl(var(--card-foreground))'
+					DEFAULT: 'hsl(var(--admin-card))',
+					foreground: 'hsl(var(--admin-card-foreground))'
 				},
 				popover: {
-					DEFAULT: 'hsl(var(--popover))',
-					foreground: 'hsl(var(--popover-foreground))'
+					DEFAULT: 'hsl(var(--admin-popover))',
+					foreground: 'hsl(var(--admin-popover-foreground))'
 				},
 				primary: {
-					DEFAULT: 'hsl(var(--primary))',
-					foreground: 'hsl(var(--primary-foreground))'
+					DEFAULT: 'hsl(var(--admin-primary))',
+					foreground: 'hsl(var(--admin-primary-foreground))'
 				},
 				secondary: {
-					DEFAULT: 'hsl(var(--secondary))',
-					foreground: 'hsl(var(--secondary-foreground))'
+					DEFAULT: 'hsl(var(--admin-secondary))',
+					foreground: 'hsl(var(--admin-secondary-foreground))'
 				},
 				muted: {
-					DEFAULT: 'hsl(var(--muted))',
-					foreground: 'hsl(var(--muted-foreground))'
+					DEFAULT: 'hsl(var(--admin-muted))',
+					foreground: 'hsl(var(--admin-muted-foreground))'
 				},
 				accent: {
-					DEFAULT: 'hsl(var(--accent))',
-					foreground: 'hsl(var(--accent-foreground))'
+					DEFAULT: 'hsl(var(--admin-accent))',
+					foreground: 'hsl(var(--admin-accent-foreground))'
 				},
 				destructive: {
-					DEFAULT: 'hsl(var(--destructive))',
-					foreground: 'hsl(var(--destructive-foreground))'
+					DEFAULT: 'hsl(var(--admin-destructive))',
+					foreground: 'hsl(var(--admin-destructive-foreground))'
 				},
-				border: 'hsl(var(--border))',
-				input: 'hsl(var(--input))',
-				ring: 'hsl(var(--ring))',
+				border: 'hsl(var(--admin-border))',
+				input: 'hsl(var(--admin-input))',
+				ring: 'hsl(var(--admin-ring))',
 				chart: {
-					'1': 'hsl(var(--chart-1))',
-					'2': 'hsl(var(--chart-2))',
-					'3': 'hsl(var(--chart-3))',
-					'4': 'hsl(var(--chart-4))',
-					'5': 'hsl(var(--chart-5))'
+					'1': 'hsl(var(--admin-chart-1))',
+					'2': 'hsl(var(--admin-chart-2))',
+					'3': 'hsl(var(--admin-chart-3))',
+					'4': 'hsl(var(--admin-chart-4))',
+					'5': 'hsl(var(--admin-chart-5))'
 				}
 			}
 		}
