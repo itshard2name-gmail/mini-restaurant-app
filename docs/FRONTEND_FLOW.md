@@ -27,20 +27,21 @@ stateDiagram-v2
     state AdminDashboard: Admin Dashboard (/admin)
 
     %% --- Login Flow ---
+    %% --- Login Flow ---
     Login --> Login: Toggle Tab (Customer/Staff)
-    Login --> MenuPage: Success (Role: User/Guest)
-    Login --> AdminDashboard: Success (Role: Admin)
+    Login --> MenuPage: "Success (Role: User/Guest)"
+    Login --> AdminDashboard: "Success (Role: Admin)"
 
     %% --- Navigation Bar (Global) ---
-    MenuPage --> Login: "Sign In" (if Guest)
-    MenuPage --> MyOrders: Navbar Link (User)
-    MenuPage --> AdminDashboard: Navbar Link (Admin)
+    MenuPage --> Login: "Sign In (if Guest)"
+    MenuPage --> MyOrders: "Navbar Link (User)"
+    MenuPage --> AdminDashboard: "Navbar Link (Admin)"
     
-    MyOrders --> MenuPage: Navbar Link / "Order Now" Btn
-    MyOrders --> Login: "Logout" (via Navbar)
+    MyOrders --> MenuPage: "Navbar Link / Order Now Btn"
+    MyOrders --> Login: "Logout (via Navbar)"
 
     AdminDashboard --> MenuPage: Navbar Link
-    AdminDashboard --> Login: "Logout" (via Navbar)
+    AdminDashboard --> Login: "Logout (via Navbar)"
 
     %% --- Internal States: Admin Dashboard ---
     state AdminDashboard {
@@ -56,8 +57,8 @@ stateDiagram-v2
     }
 
     %% --- Edge Cases / Guards ---
-    AdminDashboard --> MenuPage: Guard Check (If Role != ADMIN)
-    MyOrders --> Login: Guard Check (If Not Logged In)
+    AdminDashboard --> MenuPage: "Guard Check (If Role != ADMIN)"
+    MyOrders --> Login: "Guard Check (If Not Logged In)"
     
     %% --- Sub-App Specifics ---
     note right of MenuPage
