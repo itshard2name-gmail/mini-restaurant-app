@@ -368,7 +368,7 @@ sequenceDiagram
     FE->>FE: 轉換為 ISO String (UTC)<br/>18:00 (TW) -> 10:00 (UTC)<br/>字串: "2025-12-25T10:00:00Z"
     FE->>BE: 發送 API請求: { "date": "2025-12-25T10:00:00Z" }
 
-    rect rgb(255, 240, 240)
+    rect rgb(60, 20, 20)
     Note right of FE: 修復前：使用 LocalDateTime
     BE->>JSON: 解析 JSON
     JSON-->>BE: 產出 LocalDateTime<br/>值為 "2025-12-25T10:00:00"<br/>❌ "Z" 被無視，變成了「相對時間」
@@ -380,7 +380,7 @@ sequenceDiagram
     Note right of DB: 😱 錯誤發生點：<br/>MySQL 收到 "10:00"。<br/>若 DB session 是 UTC+8，<br/>它可能將其存為 "10:00 (TW time)"。<br/>(實際時間點變成了 UTC 02:00，差了8小時)
     end
 
-    rect rgb(230, 255, 230)
+    rect rgb(20, 60, 20)
     Note right of FE: 修復後：使用 Instant
     BE->>JSON: 解析 JSON
     JSON-->>BE: 產出 Instant<br/>值為 "2025-12-25T10:00:00Z"<br/>✅ 鎖定為 UTC 絕對時刻

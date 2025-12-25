@@ -368,7 +368,7 @@ sequenceDiagram
     FE->>FE: Convert to ISO String (UTC)<br/>18:00 (TW) -> 10:00 (UTC)<br/>String: "2025-12-25T10:00:00Z"
     FE->>BE: Send API Request: { "date": "2025-12-25T10:00:00Z" }
 
-    rect rgb(255, 240, 240)
+    rect rgb(60, 20, 20)
     Note right of FE: Before Fix: Using LocalDateTime
     BE->>JSON: Parse JSON
     JSON-->>BE: Result: LocalDateTime<br/>Value: "2025-12-25T10:00:00"<br/>❌ "Z" is lost (Relative Time)
@@ -380,7 +380,7 @@ sequenceDiagram
     Note right of DB: 😱 Error Potential:<br/>MySQL receives "10:00".<br/>If DB session is UTC+8,<br/>it stores as "10:00 (TW time)".<br/>(Actual instant shifts to UTC 02:00)
     end
 
-    rect rgb(230, 255, 230)
+    rect rgb(20, 60, 20)
     Note right of FE: After Fix: Using Instant
     BE->>JSON: Parse JSON
     JSON-->>BE: Result: Instant<br/>Value: "2025-12-25T10:00:00Z"<br/>✅ Locked to UTC absolute moment
