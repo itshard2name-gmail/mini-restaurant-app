@@ -54,3 +54,23 @@
 .admin-scope {
   @apply bg-background text-foreground font-sans antialiased;
 }
+
+@layer components {
+
+  /* Restored Analytics Dashboard Utilities */
+  .grad-revenue {
+    @apply bg-gradient-to-br from-indigo-500 to-violet-600 text-white shadow-indigo-200/50;
+  }
+
+  .grad-orders {
+    @apply bg-gradient-to-br from-emerald-500 to-teal-600 text-white shadow-emerald-200/50;
+  }
+
+  .grad-active {
+    @apply bg-gradient-to-br from-orange-500 to-red-600 text-white shadow-orange-200/50;
+  }
+
+  .card-safe-style {
+    @apply border-none shadow-lg text-white;
+  }
+}
