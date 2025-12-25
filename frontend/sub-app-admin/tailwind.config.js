@@ -1,11 +1,15 @@
 /** @type {import('tailwindcss').Config} */
 export default {
 	darkMode: ["class"],
-	important: '#sub-app-admin',
+	darkMode: ["class"],
+	// important: '#admin-wrapper', // Reverted to fix missing utilities issue
 	content: [
 		"./index.html",
 		"./src/**/*.{vue,js,ts,jsx,tsx}",
 	],
+	// Safelist dynamic classes (patterns are safer)
+	// Safelist removed - using shared UI
+	safelist: [],
 	theme: {
 		extend: {
 			borderRadius: {

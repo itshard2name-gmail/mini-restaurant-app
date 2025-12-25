@@ -113,8 +113,7 @@
 <script setup>
 import { ref, onMounted } from 'vue';
 import axios from 'axios';
-import { Card, CardContent } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
+import { Card, CardContent, Button } from '@mini-restaurant/ui';
 
 const items = ref([]);
 const loading = ref(true);

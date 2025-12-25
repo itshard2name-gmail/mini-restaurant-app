@@ -4,11 +4,7 @@ import { useCartStore } from '../stores/cart';
 import { storeToRefs } from 'pinia';
 import { useRouter } from 'vue-router';
 import axios from 'axios';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { Separator } from '@/components/ui/separator';
-import { Button } from '@/components/ui/button';
-import { Card, CardHeader, CardTitle, CardContent, CardFooter } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
+import { ScrollArea, Separator, Button, Card, CardHeader, CardTitle, CardContent, CardFooter, Badge } from '@mini-restaurant/ui';
 
 const cartStore = useCartStore();
     const { cartItems, totalPrice, totalQuantity, orderType, tableNumber } = storeToRefs(cartStore);
@@ -26,24 +22,33 @@ const cartStore = useCartStore();
     
         const token = localStorage.getItem('token');
         
-        // Defer Login Logic
-        if (!token) {
-            router.push('/login?redirect=/menu');
-            return;
-        }
-
-        // Validate Dining Mode
+        // Validation: Dining Mode
         if (!orderType.value) {
             errorMessage.value = "Please select Dining Mode (Refresh page if dialog missing)";
             loading.value = false;
             return;
         }
 
+        if (!token) {
+            // Guests strictly allowed for DINE_IN only
+            if (orderType.value !== 'DINE_IN') {
+                 loading.value = false;
+                 router.push('/login?redirect=/menu');
+                 // For Takeout without login, we force login.
+                 return;
+            }
+            // For DINE_IN, we proceed as Guest.
+        }
+
         let userId = 'admin';
-        try {
-            const payload = JSON.parse(atob(token.split('.')[1]));
-            userId = payload.sub || 'admin';
-        } catch (e) { }
+        if (token) {
+            try {
+                const payload = JSON.parse(atob(token.split('.')[1]));
+                userId = payload.sub || 'admin';
+            } catch (e) { }
+        } else {
+            userId = null; // Guest
+        }
     
         const orderItems = cartItems.value.map(item => ({
             menuId: item.menuId,
@@ -58,33 +63,91 @@ const cartStore = useCartStore();
         }
     
         try {
-            await axios.post('/api/orders', { 
-                items: orderItems,
-                orderType: orderType.value,
-                tableNumber: tableNumber.value
-            }, {
-                headers: {
-                    'Authorization': `Bearer ${token}`,
-                    'X-User-Id': userId
+            const headers = {};
+            if (token) {
+                headers['Authorization'] = `Bearer ${token}`;
+                headers['X-User-Id'] = userId;
+            }
+
+            // --- MERGE LOGIC START ---
+            let targetOrderId = null;
+            let guestToken = null;
+
+            // 1. Guest Merge Check
+            if (!token && orderType.value === 'DINE_IN') {
+                const storedId = localStorage.getItem('guest_order_id');
+                const storedToken = localStorage.getItem('guest_order_token');
+                if (storedId && storedToken) {
+                    targetOrderId = storedId;
+                    guestToken = storedToken;
                 }
-            });
-        successMessage.value = 'Order submitted successfully!';
-        clearCart();
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-        
-        // Auto-redirect to My Orders
-        setTimeout(() => {
-             router.push('/my-orders');
-        }, 500); // Small delay for user to see success message (optional) or immediate? 
-        // User asked for smooth flow. 0.5s is good feedback.
-        
-    } catch (error) {
-        console.error('Order failed:', error);
-        errorMessage.value = 'Failed to submit order.';
-    } finally {
-        loading.value = false;
-    }
-};
+            }
+            // 2. User Merge Check (Takeout or Dine-In)
+            else if (token) {
+                try {
+                    const activeRes = await axios.get('/api/orders/my/active', { headers });
+                    if (activeRes.data && activeRes.data.length > 0) {
+                        // Find latest order compatible with merge (PENDING/PREPARING)
+                        // Note: Backend might return verified list, but good to be safe.
+                        // We pick the most recent one.
+                        const activeOrder = activeRes.data[0];
+                        // Optional: Check if OrderType matches? For now assume User wants to add to *current* active order.
+                        targetOrderId = activeOrder.id;
+                    }
+                } catch (checkErr) {
+                    console.warn("Failed to check active orders for merge:", checkErr);
+                }
+            }
+
+            let response;
+            if (targetOrderId) {
+                try {
+                    console.log("Attempting to merge into Order ID:", targetOrderId);
+                    const url = `/api/orders/${targetOrderId}/items` + (guestToken ? `?token=${guestToken}` : '');
+                    response = await axios.post(url, orderItems, { headers });
+                } catch (mergeErr) {
+                    console.warn("Merge failed (Order might be verified/paid), falling back to new order:", mergeErr);
+                    targetOrderId = null; // Reset to force new order
+                }
+            }
+
+            if (!targetOrderId) {
+                // Create New Order
+                response = await axios.post('/api/orders', { 
+                    items: orderItems,
+                    orderType: orderType.value,
+                    tableNumber: tableNumber.value
+                }, { headers });
+            }
+            // --- MERGE LOGIC END ---
+
+            // Handle Guest Token (Update if new or changed)
+            if (response.data.guestToken) {
+                localStorage.setItem('guest_order_id', response.data.id);
+                localStorage.setItem('guest_order_token', response.data.guestToken);
+            }
+
+            successMessage.value = 'Order submitted successfully!';
+            clearCart();
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+            
+            // Auto-redirect to My Orders
+            setTimeout(() => {
+                 router.push('/my-orders');
+            }, 500); 
+            
+        } catch (error) {
+            console.error('Order failed:', error);
+            // Handle specific backend errors
+            if (error.response && error.response.data && error.response.data.message) {
+                 errorMessage.value = 'Failed: ' + error.response.data.message;
+            } else {
+                 errorMessage.value = 'Failed to submit order.';
+            }
+        } finally {
+            loading.value = false;
+        }
+    };
 </script>
 
 <template>
@@ -119,7 +182,7 @@ const cartStore = useCartStore();
                 {{ errorMessage }}
             </div>
 
-            <ScrollArea class="h-[calc(100vh-250px)] px-6">
+            <ScrollArea class="h-full px-6">
                 <div v-if="cartItems.length === 0" class="text-muted-foreground text-center py-10">
                     Your cart is empty.
                 </div>

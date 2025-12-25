@@ -10,6 +10,7 @@
         "serve": "vite build && vite preview"
     },
     "dependencies": {
+        "@mini-restaurant/ui": "file:../shared-ui",
         "@stomp/stompjs": "^7.2.1",
         "@vueuse/core": "^14.1.0",
         "axios": "^1.13.2",
@@ -21,7 +22,7 @@
         "sockjs-client": "^1.6.1",
         "tailwind-merge": "^3.4.0",
         "tailwindcss-animate": "^1.0.7",
-        "vue": "^3.5.24",
+        "vue": "^3.5.26",
         "vue-router": "^4.6.4"
     },
     "devDependencies": {

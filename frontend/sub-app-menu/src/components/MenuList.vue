@@ -2,10 +2,7 @@
 import { ref, onMounted } from 'vue';
 import axios from 'axios';
 import { useCartStore } from '../stores/cart';
-import { Card, CardContent, CardTitle, CardFooter } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { AspectRatio } from '@/components/ui/aspect-ratio';
+import { Card, CardContent, CardTitle, CardFooter, Badge, Button, AspectRatio } from '@mini-restaurant/ui';
 
 const cartStore = useCartStore();
 const { addToCart } = cartStore;

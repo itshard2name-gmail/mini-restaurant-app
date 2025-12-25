@@ -52,6 +52,12 @@ public class AdminOrderController {
             @RequestParam(required = false) String status,
             @RequestParam(required = false) String date,
             @RequestParam(required = false) String query) {
-        return ResponseEntity.ok(orderService.searchOrders(page, size, status, date, query));
+
+        List<String> statusList = null;
+        if (status != null && !status.trim().isEmpty()) {
+            statusList = java.util.Arrays.asList(status.split(","));
+        }
+
+        return ResponseEntity.ok(orderService.searchOrders(page, size, statusList, date, query));
     }
 }

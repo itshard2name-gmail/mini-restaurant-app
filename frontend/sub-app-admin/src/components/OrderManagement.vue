@@ -266,9 +266,7 @@ import axios from 'axios';
 import { Client } from '@stomp/stompjs';
 
 // Shadcn UI Components
-import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
+import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter, Button, Badge } from '@mini-restaurant/ui';
 
 const orders = ref([]);
 const loading = ref(true);
@@ -321,8 +319,10 @@ const fetchOrders = async () => {
 
     // If not searching, apply Status Filter based on Tab
     if (!isSearchActive.value) {
-        if (activeTabFilter() && activeTabFilter().length === 1) {
-             params.status = activeTabFilter()[0];
+        const filters = activeTabFilter();
+        if (filters && filters.length > 0) {
+             // Pass as comma-separated string which axios/Spring handles as List
+             params.status = filters.join(',');
         }
     }
     
@@ -420,9 +420,10 @@ let stompClient = null;
 
 const connectWebSocket = () => {
     stompClient = new Client({
-        brokerURL: 'ws://localhost:8088/notification/ws', // Verified port 8088 for WebSocket
+        // Gateway is mapped to Host 8088 in Docker Compose
+        brokerURL: 'ws://localhost:8088/ws', 
         onConnect: () => {
-            console.log('Connected to WebSocket');
+            console.log('Connected to WebSocket via Gateway (8088)');
             stompClient.subscribe('/topic/orders', (message) => {
                 console.log('Received message:', message.body);
                 // Refresh current page on update

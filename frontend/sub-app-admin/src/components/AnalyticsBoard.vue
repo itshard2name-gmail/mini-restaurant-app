@@ -109,18 +109,36 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, markRaw, h } from 'vue';
 import VueApexCharts from 'vue3-apexcharts';
 import axios from 'axios';
 
 // Register ApexCharts locally
 const apexchart = VueApexCharts;
 
+// Mock Icons using render functions (avoid runtime template compilation)
+const CurrencyDollarIconComp = { 
+  render: () => h('svg', { xmlns: 'http://www.w3.org/2000/svg', fill: 'none', viewBox: '0 0 24 24', 'stroke-width': '1.5', stroke: 'currentColor' }, [
+    h('path', { 'stroke-linecap': 'round', 'stroke-linejoin': 'round', d: 'M12 6v12m-3-2.818l.879.659c1.171.879 3.07.879 4.242 0 1.172-.879 1.172-2.303 0-3.182C13.536 12.219 12.768 12 12 12c-.725 0-1.45-.22-2.003-.659-1.106-.879-1.106-2.303 0-3.182s2.9-.879 4.006 0l.415.33M21 12a9 9 0 11-18 0 9 9 0 0118 0z' })
+  ])
+};
+const ShoppingBagIconComp = { 
+  render: () => h('svg', { xmlns: 'http://www.w3.org/2000/svg', fill: 'none', viewBox: '0 0 24 24', 'stroke-width': '1.5', stroke: 'currentColor' }, [
+    h('path', { 'stroke-linecap': 'round', 'stroke-linejoin': 'round', d: 'M15.75 10.5V6a3.75 3.75 0 10-7.5 0v4.5m11.356-1.993l1.263 12c.07.665-.45 1.243-1.119 1.243H4.25a1.125 1.125 0 01-1.12-1.243l1.264-12A1.125 1.125 0 015.513 7.5h12.974c.576 0 1.059.435 1.119 1.007zM8.625 10.5a.375.375 0 11-.75 0 .375.375 0 01.75 0zm7.5 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z' })
+  ])
+};
+const FireIconComp = { 
+  render: () => h('svg', { xmlns: 'http://www.w3.org/2000/svg', fill: 'none', viewBox: '0 0 24 24', 'stroke-width': '1.5', stroke: 'currentColor' }, [
+    h('path', { 'stroke-linecap': 'round', 'stroke-linejoin': 'round', d: 'M15.362 5.214A8.252 8.252 0 0112 21 8.25 8.25 0 016.038 7.047 8.287 8.287 0 009 9.601a8.983 8.983 0 013.361-6.867 8.21 8.21 0 003 2.48z' }),
+    h('path', { 'stroke-linecap': 'round', 'stroke-linejoin': 'round', d: 'M12 18a3.75 3.75 0 00.495-7.467 5.99 5.99 0 00-1.925 3.546 5.974 5.974 0 01-2.133-1A3.75 3.75 0 0012 18z' })
+  ])
+};
+
 const loading = ref(true);
 const stats = ref([
-   { label: "Today's Revenue", value: "$0.00", icon: 'CurrencyDollarIcon', gradient: 'bg-gradient-to-br from-violet-600 to-indigo-600' },
-   { label: "Today's Orders", value: "0", icon: 'ShoppingBagIcon', gradient: 'bg-gradient-to-br from-blue-500 to-cyan-400' },
-   { label: "Active Orders", value: "0", icon: 'FireIcon', gradient: 'bg-gradient-to-br from-orange-400 to-pink-500' }
+   { label: "Today's Revenue", value: "$0.00", icon: markRaw(CurrencyDollarIconComp), gradient: 'grad-revenue card-safe-style' },
+   { label: "Today's Orders", value: "0", icon: markRaw(ShoppingBagIconComp), gradient: 'grad-orders card-safe-style' },
+   { label: "Active Orders", value: "0", icon: markRaw(FireIconComp), gradient: 'grad-active card-safe-style' }
 ]);
 
 const series = ref([{ name: 'Revenue', data: [] }]);
@@ -201,15 +219,13 @@ const pieOptions = ref({
 const pieSeries = ref([]);
 const aovStats = ref({ dineIn: 0, takeout: 0 });
 
-// Mock Icons
-const CurrencyDollarIconComp = { template: `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6v12m-3-2.818l.879.659c1.171.879 3.07.879 4.242 0 1.172-.879 1.172-2.303 0-3.182C13.536 12.219 12.768 12 12 12c-.725 0-1.45-.22-2.003-.659-1.106-.879-1.106-2.303 0-3.182s2.9-.879 4.006 0l.415.33M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>` };
-const ShoppingBagIconComp = { template: `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 10.5V6a3.75 3.75 0 10-7.5 0v4.5m11.356-1.993l1.263 12c.07.665-.45 1.243-1.119 1.243H4.25a1.125 1.125 0 01-1.12-1.243l1.264-12A1.125 1.125 0 015.513 7.5h12.974c.576 0 1.059.435 1.119 1.007zM8.625 10.5a.375.375 0 11-.75 0 .375.375 0 01.75 0zm7.5 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z" /></svg>` };
-const FireIconComp = { template: `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M15.362 5.214A8.252 8.252 0 0112 21 8.25 8.25 0 016.038 7.047 8.287 8.287 0 009 9.601a8.983 8.983 0 013.361-6.867 8.21 8.21 0 003 2.48z" /><path stroke-linecap="round" stroke-linejoin="round" d="M12 18a3.75 3.75 0 00.495-7.467 5.99 5.99 0 00-1.925 3.546 5.974 5.974 0 01-2.133-1A3.75 3.75 0 0012 18z" /></svg>` };
+// Update stats array to use component objects
+// (Icons are now defined above)
 
 // Update stats array to use component objects
-stats.value[0].icon = CurrencyDollarIconComp;
-stats.value[1].icon = ShoppingBagIconComp;
-stats.value[2].icon = FireIconComp;
+stats.value[0].icon = markRaw(CurrencyDollarIconComp);
+stats.value[1].icon = markRaw(ShoppingBagIconComp);
+stats.value[2].icon = markRaw(FireIconComp);
 
 const fetchData = async () => {
     loading.value = true;

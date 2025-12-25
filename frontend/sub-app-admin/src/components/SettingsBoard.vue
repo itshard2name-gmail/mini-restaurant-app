@@ -43,7 +43,7 @@
 <script setup>
 import { ref, onMounted } from 'vue';
 import axios from 'axios';
-import Toast from '@/components/ui/Toast.vue'; // [NEW]
+import { Toast } from '@mini-restaurant/ui';
 
 const saving = ref(false);
 const settings = ref({

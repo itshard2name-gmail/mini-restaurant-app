@@ -58,8 +58,26 @@ public class OrderService {
     @Transactional
     public Order createOrder(String userId, CreateOrderRequest request) {
         Order order = new Order();
-        order.setUserId(userId);
-        order.setStatus("PENDING"); // Default to PENDING
+
+        // Handle Guest Order vs User Order
+        if (userId != null && !userId.isBlank()) {
+            order.setUserId(userId);
+        } else {
+            // Guest Order: STRICT Validation
+            if (request.getOrderType() == null ||
+                    !com.example.order.entity.OrderType.valueOf(request.getOrderType())
+                            .equals(com.example.order.entity.OrderType.DINE_IN)) {
+                throw new IllegalArgumentException("Guest orders (without User ID) are restricted to DINE_IN only.");
+            }
+            if (request.getTableNumber() == null || request.getTableNumber().trim().isEmpty()) {
+                throw new IllegalArgumentException("Guest orders must have a Table Number.");
+            }
+            // Generate Guest Token
+            order.setGuestToken(java.util.UUID.randomUUID().toString());
+            order.setUserId(null);
+        }
+
+        order.setStatus("PENDING");
 
         // Map OrderType
         try {
@@ -79,9 +97,13 @@ public class OrderService {
                 }
             } else {
                 // Default to TAKEOUT if not specified for backward compatibility
+                // BUT if guest (userId is null), we already rejected it above.
                 order.setOrderType(com.example.order.entity.OrderType.TAKEOUT);
             }
         } catch (IllegalArgumentException e) {
+            // Catch String to Enum failure or manual throws
+            if (e.getMessage().contains("Guest orders"))
+                throw e; // Rethrow our custom checks
             throw new IllegalArgumentException("Invalid Order Type: " + request.getOrderType());
         }
 
@@ -123,6 +145,89 @@ public class OrderService {
     }
 
     @Transactional
+    public Order addItems(Long orderId, String userId, String guestToken, List<OrderItemRequest> itemRequests) {
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new org.springframework.web.server.ResponseStatusException(
+                        org.springframework.http.HttpStatus.NOT_FOUND, "Order not found: " + orderId));
+
+        // 1. Access Control
+        if (order.getUserId() != null) {
+            // User Order
+            if (userId == null || !order.getUserId().equals(userId)) {
+                throw new org.springframework.web.server.ResponseStatusException(
+                        org.springframework.http.HttpStatus.FORBIDDEN, "Unauthorized: You do not own this order");
+            }
+        } else {
+            // Guest Order
+            if (order.getGuestToken() == null || !order.getGuestToken().equals(guestToken)) {
+                throw new org.springframework.web.server.ResponseStatusException(
+                        org.springframework.http.HttpStatus.FORBIDDEN,
+                        "Unauthorized: Invalid Guest Token for this order");
+            }
+        }
+
+        // 2. Status Validation (Allow PENDING or PREPARING)
+        if (!"PENDING".equals(order.getStatus()) && !"PREPARING".equals(order.getStatus())) {
+            throw new org.springframework.web.server.ResponseStatusException(
+                    org.springframework.http.HttpStatus.BAD_REQUEST,
+                    "Cannot add items to order with status: " + order.getStatus());
+        }
+
+        if (itemRequests == null || itemRequests.isEmpty()) {
+            throw new IllegalArgumentException("Items cannot be empty");
+        }
+
+        BigDecimal currentTotal = order.getTotalPrice();
+        List<OrderItem> existingItems = order.getItems();
+
+        for (OrderItemRequest itemRequest : itemRequests) {
+            Menu menu = menuRepository.findById(java.util.Objects.requireNonNull(itemRequest.getMenuId()))
+                    .orElseThrow(() -> new RuntimeException("Menu not found: " + itemRequest.getMenuId()));
+
+            OrderItem orderItem = new OrderItem();
+            orderItem.setOrder(order);
+            orderItem.setMenuId(menu.getId());
+            orderItem.setSnapshotName(menu.getName());
+            orderItem.setSnapshotPrice(menu.getPrice());
+            orderItem.setQuantity(
+                    java.util.Objects.requireNonNull(itemRequest.getQuantity(), "Quantity cannot be null"));
+            orderItem.setNotes(itemRequest.getNotes());
+
+            BigDecimal itemTotal = menu.getPrice().multiply(BigDecimal.valueOf(itemRequest.getQuantity()));
+            currentTotal = currentTotal.add(itemTotal);
+
+            existingItems.add(orderItem);
+        }
+
+        order.setTotalPrice(currentTotal);
+
+        Order savedOrder = orderRepository.save(order);
+        sendOrderEvent(savedOrder);
+
+        return savedOrder;
+    }
+
+    public Order getOrder(Long orderId, String userId, String guestToken) {
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new RuntimeException("Order not found: " + orderId));
+
+        // Access Control Logic
+        if (order.getUserId() != null) {
+            // Owner is a Registered User
+            if (userId == null || !order.getUserId().equals(userId)) {
+                throw new RuntimeException("Unauthorized: You do not own this order");
+            }
+        } else {
+            // Owner is a Guest
+            if (order.getGuestToken() == null || !order.getGuestToken().equals(guestToken)) {
+                throw new RuntimeException("Unauthorized: Invalid Guest Token for this order");
+            }
+        }
+
+        return order;
+    }
+
+    @Transactional
     public Order payOrder(Long orderId) {
         Order order = orderRepository.findById(orderId)
                 .orElseThrow(() -> new RuntimeException("Order not found: " + orderId));
@@ -146,6 +251,22 @@ public class OrderService {
     }
 
     private void sendOrderEvent(Order order) {
+        // Fix for Race Condition: Ensure DB commit happens before Event consumes by
+        // Frontend
+        if (org.springframework.transaction.support.TransactionSynchronizationManager.isActualTransactionActive()) {
+            org.springframework.transaction.support.TransactionSynchronizationManager.registerSynchronization(
+                    new org.springframework.transaction.support.TransactionSynchronization() {
+                        @Override
+                        public void afterCommit() {
+                            doSendOrderEvent(order);
+                        }
+                    });
+        } else {
+            doSendOrderEvent(order);
+        }
+    }
+
+    private void doSendOrderEvent(Order order) {
         try {
             java.util.Map<String, Object> event = new java.util.HashMap<>();
             event.put("orderId", order.getId());
@@ -206,7 +327,8 @@ public class OrderService {
         return savedOrder;
     }
 
-    public org.springframework.data.domain.Page<Order> searchOrders(int page, int size, String status, String date,
+    public org.springframework.data.domain.Page<Order> searchOrders(int page, int size, List<String> statuses,
+            String date,
             String query) {
         org.springframework.data.domain.Pageable pageable = org.springframework.data.domain.PageRequest.of(page, size,
                 org.springframework.data.domain.Sort.by(org.springframework.data.domain.Sort.Direction.DESC,
@@ -215,8 +337,7 @@ public class OrderService {
         // Normalize query to lowercase for case-insensitive search if present
         String finalQuery = (query != null && !query.trim().isEmpty()) ? query.toLowerCase().trim() : null;
         String finalDate = (date != null && !date.trim().isEmpty()) ? date.trim() : null;
-        String finalStatus = (status != null && !status.trim().isEmpty()) ? status.trim() : null;
 
-        return orderRepository.findOrders(finalStatus, finalDate, finalQuery, pageable);
+        return orderRepository.findOrders(statuses, finalDate, finalQuery, pageable);
     }
 }

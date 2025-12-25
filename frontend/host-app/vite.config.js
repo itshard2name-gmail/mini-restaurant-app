@@ -17,7 +17,7 @@ export default defineConfig({
       name: 'host-app',
       remotes: {
         'sub-app-menu': 'http://localhost:5001/assets/remoteEntry.js',
-        'sub-app-admin': 'http://localhost:5003/assets/remoteEntry.js',
+        'sub-app-admin': 'http://localhost:5003/remoteEntry.js',
       },
       shared: ['vue', 'pinia', 'vue-router']
     })

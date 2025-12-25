@@ -14,7 +14,11 @@ public class Order {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    private String userId; // From X-User-Id header
+    @Column(nullable = true)
+    private String userId; // From X-User-Id header (Nullable for Guest)
+
+    private String guestToken; // Random UUID for Guest Access
+
     private BigDecimal totalPrice;
     private String status; // PENDING, COMPLETED, etc.
 

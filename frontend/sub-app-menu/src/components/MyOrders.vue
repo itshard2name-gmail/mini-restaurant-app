@@ -3,14 +3,17 @@ import { ref, onMounted, onUnmounted } from 'vue';
 import axios from 'axios';
 import { Client } from '@stomp/stompjs';
 import SockJS from 'sockjs-client';
-import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Separator } from '@/components/ui/separator';
+import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter, Badge, Button, Separator } from '@mini-restaurant/ui';
 
 const activeOrders = ref([]);
 const historyOrders = ref([]);
 const currentTab = ref('active'); // 'active' | 'history'
+const isGuest = ref(false);
+
+const checkGuestStatus = () => {
+    const token = localStorage.getItem('token');
+    isGuest.value = !token && !!localStorage.getItem('guest_order_id');
+};
 
 const loading = ref(false);
 const historyLoading = ref(false); // loading state for load more
@@ -25,13 +28,49 @@ const fetchActiveOrders = async () => {
     loading.value = true;
     error.value = '';
     const token = localStorage.getItem('token');
-    let userId = 'admin';
-    if (token) {
-        try {
-            const payload = JSON.parse(atob(token.split('.')[1]));
-            userId = payload.sub || 'admin';
-        } catch(e) {}
+    
+    // Guest Mode Check
+    if (!token) {
+        const guestId = localStorage.getItem('guest_order_id');
+        const guestToken = localStorage.getItem('guest_order_token');
+
+        if (guestId && guestToken) {
+            try {
+                // Fetch specific guest order
+                const response = await axios.get(`/api/orders/${guestId}`, {
+                    params: { token: guestToken }
+                });
+                // Wrap in array to match expected format
+                activeOrders.value = [response.data];
+            } catch (e) {
+                console.error('Failed to fetch guest order', e);
+                // If 403 or 404, maybe clear invalid token?
+                if (e.response && (e.response.status === 404 || e.response.status === 403)) {
+                     localStorage.removeItem('guest_order_id');
+                     localStorage.removeItem('guest_order_token');
+                     error.value = 'Guest session expired. Please scan code again.';
+                } else {
+                     error.value = 'Failed to load order.';
+                }
+                activeOrders.value = [];
+            } finally {
+                loading.value = false;
+            }
+            return;
+        }
+        
+        // No User Token and No Guest Token
+        activeOrders.value = [];
+        loading.value = false;
+        return;
     }
+
+    // Registered User Logic
+    let userId = 'admin';
+    try {
+        const payload = JSON.parse(atob(token.split('.')[1]));
+        userId = payload.sub || 'admin';
+    } catch(e) {}
 
     try {
         const response = await axios.get('/api/orders/my/active', {
@@ -221,14 +260,16 @@ const connectWebSocket = () => {
     }
 
     console.log('Connecting to WebSocket for user:', userId);
-    const socket = new SockJS('http://localhost:8088/ws'); 
+    
+    // Updated to use Gateway Port (8088) mapped in Docker
+    // Removed SockJS to align with Admin App and Gateway configuration
     stompClient = new Client({
-        webSocketFactory: () => socket,
+        brokerURL: 'ws://localhost:8088/ws',
         debug: (str) => {
             console.log('STOMP: ' + str);
         },
         onConnect: () => {
-            console.log('Connected to WebSocket');
+            console.log('Connected to WebSocket (Customer View)');
             stompClient.subscribe(`/topic/orders/user/${userId}`, (message) => {
                 if (message.body) {
                     console.log('Received order update:', message.body);
@@ -249,6 +290,7 @@ const connectWebSocket = () => {
 };
 
 onMounted(() => {
+    checkGuestStatus();
     fetchActiveOrders();
     connectWebSocket();
 });
@@ -275,10 +317,11 @@ onUnmounted(() => {
                 class="px-4 py-2 font-medium text-sm transition-colors relative"
                 :class="currentTab === 'active' ? 'text-primary border-b-2 border-primary -mb-px' : 'text-muted-foreground hover:text-foreground'"
              >
-                Active Orders
+                {{ !isGuest ? 'Active Orders' : 'Your Order' }}
                 <Badge v-if="activeOrders.length > 0" class="ml-2 px-1.5 py-0.5 text-[10px]">{{ activeOrders.length }}</Badge>
              </button>
              <button 
+                v-if="!isGuest"
                 @click="switchTab('history')"
                 class="px-4 py-2 font-medium text-sm transition-colors relative"
                 :class="currentTab === 'history' ? 'text-primary border-b-2 border-primary -mb-px' : 'text-muted-foreground hover:text-foreground'"

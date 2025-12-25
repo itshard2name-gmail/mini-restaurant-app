@@ -53,11 +53,11 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
 
         // Phase 20: Server-Side Search & Pagination
         @Query("SELECT o FROM Order o WHERE " +
-                        "(:status IS NULL OR o.status = :status) AND " +
+                        "((:statuses) IS NULL OR o.status IN (:statuses)) AND " +
                         "(:date IS NULL OR FUNCTION('DATE_FORMAT', o.createdAt, '%Y-%m-%d') = :date) AND " +
                         "(:query IS NULL OR (CAST(o.id AS string) LIKE %:query% OR LOWER(o.userId) LIKE %:query%))")
         org.springframework.data.domain.Page<Order> findOrders(
-                        @Param("status") String status,
+                        @Param("statuses") List<String> statuses,
                         @Param("date") String date,
                         @Param("query") String query,
                         org.springframework.data.domain.Pageable pageable);

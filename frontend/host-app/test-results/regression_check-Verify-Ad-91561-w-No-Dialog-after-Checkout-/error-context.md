@@ -1,0 +1,184 @@
+# Page snapshot
+
+```yaml
+- generic [ref=e3]:
+  - navigation [ref=e4]:
+    - generic [ref=e5]:
+      - generic [ref=e6]:
+        - img [ref=e8]
+        - generic [ref=e10]: Restaurant App
+      - generic [ref=e12]:
+        - link "Menu" [ref=e13] [cursor=pointer]:
+          - /url: /menu
+        - link "My Orders" [ref=e14] [cursor=pointer]:
+          - /url: /my-orders
+        - link "Sign In" [ref=e16] [cursor=pointer]:
+          - /url: /login
+  - generic [ref=e17]:
+    - generic [ref=e19]:
+      - generic [ref=e20]:
+        - heading "Welcome!" [level=3] [ref=e21]
+        - paragraph [ref=e22]: How would you like to enjoy your meal today?
+      - generic [ref=e24]:
+        - button "Dine In" [ref=e25] [cursor=pointer]:
+          - img [ref=e27]
+          - generic [ref=e30]: Dine In
+        - button "Takeout" [ref=e31] [cursor=pointer]:
+          - img [ref=e33]
+          - generic [ref=e37]: Takeout
+    - generic [ref=e39]:
+      - main [ref=e40]:
+        - generic [ref=e42]:
+          - heading "Menu" [level=1] [ref=e43]
+          - paragraph [ref=e44]: Select your favorite dishes.
+        - generic [ref=e45]:
+          - generic [ref=e46]:
+            - generic [ref=e47]:
+              - generic:
+                - img
+              - textbox "Search menu items..." [ref=e48]
+            - generic [ref=e49]:
+              - button "All" [ref=e50] [cursor=pointer]
+              - button "Main" [ref=e51] [cursor=pointer]
+              - button "Starters" [ref=e52] [cursor=pointer]
+          - generic [ref=e53]:
+            - generic [ref=e54]:
+              - generic [ref=e55]:
+                - img "Classic Burger" [ref=e58]
+                - generic [ref=e60]: $12.99
+              - generic [ref=e61]:
+                - heading "Classic Burger" [level=3] [ref=e62]
+                - paragraph [ref=e63]: Juicy beef patty with lettuce, tomato, and cheese
+              - button "Add to Cart" [ref=e65] [cursor=pointer]
+            - generic [ref=e66]:
+              - generic [ref=e67]:
+                - img "Margherita Pizza" [ref=e70]
+                - generic [ref=e72]: $15.5
+              - generic [ref=e73]:
+                - heading "Margherita Pizza" [level=3] [ref=e74]
+                - paragraph [ref=e75]: Traditional Italian pizza with basil and mozzarella
+              - button "Add to Cart" [ref=e77] [cursor=pointer]
+            - generic [ref=e78]:
+              - generic [ref=e79]:
+                - img "Caesar Salad" [ref=e82]
+                - generic [ref=e84]: $8.99
+              - generic [ref=e85]:
+                - heading "Caesar Salad" [level=3] [ref=e86]
+                - paragraph [ref=e87]: Crisp romaine lettuce
+              - button "Add to Cart" [ref=e89] [cursor=pointer]
+            - generic [ref=e90]:
+              - generic [ref=e91]:
+                - img "Spaghetti Carbonara" [ref=e94]
+                - generic [ref=e96]: $14
+              - generic [ref=e97]:
+                - heading "Spaghetti Carbonara" [level=3] [ref=e98]
+                - paragraph [ref=e99]: Creamy pasta with pancetta and black pepper
+              - button "Add to Cart" [ref=e101] [cursor=pointer]
+            - generic [ref=e102]:
+              - generic [ref=e103]:
+                - img "Classic Burger" [ref=e106]
+                - generic [ref=e108]: $12.99
+              - generic [ref=e109]:
+                - heading "Classic Burger" [level=3] [ref=e110]
+                - paragraph [ref=e111]: Juicy beef patty with lettuce, tomato, and cheese
+              - button "Add to Cart" [ref=e113] [cursor=pointer]
+            - generic [ref=e114]:
+              - generic [ref=e115]:
+                - img "Margherita Pizza" [ref=e118]
+                - generic [ref=e120]: $15.5
+              - generic [ref=e121]:
+                - heading "Margherita Pizza" [level=3] [ref=e122]
+                - paragraph [ref=e123]: Traditional Italian pizza with basil and mozzarella
+              - button "Add to Cart" [ref=e125] [cursor=pointer]
+            - generic [ref=e126]:
+              - generic [ref=e127]:
+                - img "Caesar Salad" [ref=e130]
+                - generic [ref=e132]: $8.99
+              - generic [ref=e133]:
+                - heading "Caesar Salad" [level=3] [ref=e134]
+                - paragraph [ref=e135]: Crisp romaine lettuce
+              - button "Add to Cart" [ref=e137] [cursor=pointer]
+            - generic [ref=e138]:
+              - generic [ref=e139]:
+                - img "Spaghetti Carbonara" [ref=e142]
+                - generic [ref=e144]: $14
+              - generic [ref=e145]:
+                - heading "Spaghetti Carbonara" [level=3] [ref=e146]
+                - paragraph [ref=e147]: Creamy pasta with pancetta and black pepper
+              - button "Add to Cart" [ref=e149] [cursor=pointer]
+            - generic [ref=e150]:
+              - generic [ref=e151]:
+                - img "Classic Burger" [ref=e154]
+                - generic [ref=e156]: $12.99
+              - generic [ref=e157]:
+                - heading "Classic Burger" [level=3] [ref=e158]
+                - paragraph [ref=e159]: Juicy beef patty with lettuce, tomato, and cheese
+              - button "Add to Cart" [ref=e161] [cursor=pointer]
+            - generic [ref=e162]:
+              - generic [ref=e163]:
+                - img "Margherita Pizza" [ref=e166]
+                - generic [ref=e168]: $15.5
+              - generic [ref=e169]:
+                - heading "Margherita Pizza" [level=3] [ref=e170]
+                - paragraph [ref=e171]: Traditional Italian pizza with basil and mozzarella
+              - button "Add to Cart" [ref=e173] [cursor=pointer]
+            - generic [ref=e174]:
+              - generic [ref=e175]:
+                - img "Caesar Salad" [ref=e178]
+                - generic [ref=e180]: $8.99
+              - generic [ref=e181]:
+                - heading "Caesar Salad" [level=3] [ref=e182]
+                - paragraph [ref=e183]: Crisp romaine lettuce
+              - button "Add to Cart" [ref=e185] [cursor=pointer]
+            - generic [ref=e186]:
+              - generic [ref=e187]:
+                - img "Spaghetti Carbonara" [ref=e190]
+                - generic [ref=e192]: $14
+              - generic [ref=e193]:
+                - heading "Spaghetti Carbonara" [level=3] [ref=e194]
+                - paragraph [ref=e195]: Creamy pasta with pancetta and black pepper
+              - button "Add to Cart" [ref=e197] [cursor=pointer]
+            - generic [ref=e198]:
+              - generic [ref=e199]:
+                - img "Classic Burger" [ref=e202]
+                - generic [ref=e204]: $12.99
+              - generic [ref=e205]:
+                - heading "Classic Burger" [level=3] [ref=e206]
+                - paragraph [ref=e207]: Juicy beef patty with lettuce, tomato, and cheese
+              - button "Add to Cart" [ref=e209] [cursor=pointer]
+            - generic [ref=e210]:
+              - generic [ref=e211]:
+                - img "Margherita Pizza" [ref=e214]
+                - generic [ref=e216]: $15.5
+              - generic [ref=e217]:
+                - heading "Margherita Pizza" [level=3] [ref=e218]
+                - paragraph [ref=e219]: Traditional Italian pizza with basil and mozzarella
+              - button "Add to Cart" [ref=e221] [cursor=pointer]
+            - generic [ref=e222]:
+              - generic [ref=e223]:
+                - img "Caesar Salad" [ref=e226]
+                - generic [ref=e228]: $8.99
+              - generic [ref=e229]:
+                - heading "Caesar Salad" [level=3] [ref=e230]
+                - paragraph [ref=e231]: Crisp romaine lettuce
+              - button "Add to Cart" [ref=e233] [cursor=pointer]
+            - generic [ref=e234]:
+              - generic [ref=e235]:
+                - img "Spaghetti Carbonara" [ref=e238]
+                - generic [ref=e240]: $14
+              - generic [ref=e241]:
+                - heading "Spaghetti Carbonara" [level=3] [ref=e242]
+                - paragraph [ref=e243]: Creamy pasta with pancetta and black pepper
+              - button "Add to Cart" [ref=e245] [cursor=pointer]
+      - complementary [ref=e246]:
+        - generic [ref=e248]:
+          - heading "Shopping Cart 0 items" [level=3] [ref=e250]:
+            - generic [ref=e251]: Shopping Cart
+            - generic [ref=e253]: 0 items
+          - generic [ref=e258]: Your cart is empty.
+          - generic [ref=e259]:
+            - generic [ref=e260]:
+              - generic [ref=e261]: Total
+              - generic [ref=e262]: $0.00
+            - button "Checkout" [disabled]
+```

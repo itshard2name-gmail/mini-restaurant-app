@@ -5,6 +5,16 @@ const error = ref(null);
 const info = ref('');
 
 onErrorCaptured((err, instance, inf) => {
+  if (err.message) {
+      if (err.message.includes("Cannot destructure property 'bum'")) {
+          console.warn("Global Error Boundary Suppressed Vue Federation Unmount Error:", err);
+          return false;
+      }
+      if (err.message.includes("nextSibling")) {
+          console.warn("Global Error Boundary Suppressed DOM Race Condition:", err);
+          return false;
+      }
+  }
   error.value = err;
   info.value = inf;
   console.error("Global Error Boundary Caught:", err);

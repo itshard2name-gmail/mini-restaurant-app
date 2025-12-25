@@ -3,6 +3,7 @@ import Login from '../components/Login.vue'
 import { defineAsyncComponent } from 'vue'
 
 // Basic error boundary for remote components
+// Basic error boundary for remote components
 const MenuList = defineAsyncComponent(() =>
     import('sub-app-menu/MenuPage').catch(err => {
         console.error("Failed to load MenuPage remote:", err);
@@ -28,7 +29,7 @@ const routes = [
     { path: '/', redirect: '/menu' },
     { path: '/login', component: Login, meta: { guest: true } },
     { path: '/menu', component: MenuList, meta: { requiresAuth: false } },
-    { path: '/my-orders', component: MyOrders, meta: { requiresAuth: true, roles: ['ROLE_USER', 'ROLE_ADMIN'] } },
+    { path: '/my-orders', component: MyOrders, meta: { requiresAuth: false } }, // Allowed for Guest Tokens too
     { path: '/admin', component: AdminDashboard, meta: { requiresAuth: true, roles: ['ROLE_ADMIN'] } }
 ]
 

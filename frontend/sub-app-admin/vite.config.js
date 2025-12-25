@@ -31,6 +31,10 @@ export default defineConfig({
     strictPort: true
   },
   build: {
-    target: 'esnext'
-  }
+    target: 'esnext', // Top-level await support
+    cssCodeSplit: false,
+    assetsDir: ''
+  },
+  // Ensure assets are loaded from the correct remote domain/port
+  base: 'http://localhost:5003/'
 })

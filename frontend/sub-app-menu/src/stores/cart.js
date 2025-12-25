@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia';
-import { ref, computed } from 'vue';
+import { ref, computed, watch } from 'vue';
 
 export const useCartStore = defineStore('cart', () => {
     const items = ref({});
@@ -43,7 +43,9 @@ export const useCartStore = defineStore('cart', () => {
     };
 
     const clearCart = () => {
+        console.log("Cart cleared (items only, mode preserved)");
         items.value = {};
+        // Do NOT reset orderType/tableNumber to allow "Add to Order" flow without re-prompting.
     };
 
     const cartItems = computed(() => Object.values(items.value));
@@ -55,6 +57,33 @@ export const useCartStore = defineStore('cart', () => {
     const totalQuantity = computed(() => {
         return cartItems.value.reduce((total, item) => total + item.quantity, 0);
     });
+
+    // --- Persistence Logic ---
+    const STORAGE_KEY = 'restaurant_cart_store';
+
+    // Hydrate
+    try {
+        const stored = localStorage.getItem(STORAGE_KEY);
+        if (stored) {
+            const data = JSON.parse(stored);
+            items.value = data.items || {};
+            orderType.value = data.orderType || null;
+            tableNumber.value = data.tableNumber || null;
+        }
+    } catch (e) {
+        console.error("Failed to rehydrate cart", e);
+    }
+
+    // Persist
+    // Watch deeply for changes
+    watch([items, orderType, tableNumber], () => {
+        const data = {
+            items: items.value,
+            orderType: orderType.value,
+            tableNumber: tableNumber.value
+        };
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+    }, { deep: true });
 
     return {
         items,
