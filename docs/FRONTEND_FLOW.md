@@ -21,16 +21,17 @@ stateDiagram-v2
     [*] --> Root: /
     Root --> MenuPage: Redirects to /menu
 
-    state "Login Page (/login)" as Login
+    state "Customer Login (/login)" as Login
+    state "Staff Login (/staff/login)" as StaffLogin
     state "Menu Page (/menu)" as MenuPage
     state "My Orders (/my-orders)" as MyOrders
     state "Admin Dashboard (/admin)" as AdminDashboard
 
     %% --- Login Flow ---
-    Login --> Login: Toggle Tab (Customer/Staff)
     Login --> MenuPage: Success - Role User/Guest
-    Login --> AdminDashboard: Success - Role Admin
+    StaffLogin --> AdminDashboard: Success - Role Admin
 
+    %% --- Navigation Bar (Global) ---
     %% --- Navigation Bar (Global) ---
     MenuPage --> Login: Sign In (if Guest)
     MenuPage --> MyOrders: Navbar Link (User)
@@ -40,7 +41,7 @@ stateDiagram-v2
     MyOrders --> Login: Logout (via Navbar)
 
     AdminDashboard --> MenuPage: Navbar Link
-    AdminDashboard --> Login: Logout (via Navbar)
+    AdminDashboard --> StaffLogin: Logout (via Navbar)
 
     %% --- Internal States: Admin Dashboard ---
     state AdminDashboard {
@@ -76,10 +77,11 @@ stateDiagram-v2
 | Function | Start Node | Intermediate Nodes | End Node | Logic / Guard |
 | :--- | :--- | :--- | :--- | :--- |
 | **Guest Entry** | `Root /` | `Redirect` | `MenuPage` | Default Route |
-| **Quick Login** | `MenuPage` | `Login` -> `Quick Login API` | `MenuPage` / `MyOrders` | Stays on previous or default |
-| **Admin Access** | `Login` | `Staff Login API` | `AdminDashboard` | Role Check: `ROLE_ADMIN` |
+| **Quick Login** | `MenuPage` | `Login` -> `Quick Login API` | `MenuPage` / `MyOrders` | Customer Flow |
+| **Admin Access** | `Direct URL` | `StaffLogin` -> `Staff Login API` | `AdminDashboard` | Role Check: `ROLE_ADMIN` |
 | **View History** | `MenuPage` | `Navbar` | `MyOrders` | Role Check: `ROLE_USER` |
-| **Logout** | Any | `Navbar` -> `Clear Token` | `Login` | Global Logout |
+| **Logout (User)** | `MyOrders` / `MenuPage` | `Navbar` -> `Clear Token` | `Login` | Role: USER/GUEST |
+| **Logout (Admin)** | `AdminDashboard` | `Navbar` -> `Clear Token` | `StaffLogin` | Role: ADMIN |
 | **Empty Order** | `MyOrders` | "Order Now" Button | `MenuPage` | Empty State UI |
 
 ## 4. Conflict & Risk Analysis
