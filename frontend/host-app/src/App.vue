@@ -19,17 +19,31 @@ const handleLogout = () => {
   }
 };
 
+const diningInfo = ref(null);
+
 const checkRole = () => {
   const token = localStorage.getItem('token');
   if (!token) {
     isAdmin.value = false;
+    diningInfo.value = null;
     return;
   }
   try {
     const payload = JSON.parse(atob(token.split('.')[1]));
     isAdmin.value = payload.roles && payload.roles.includes('ROLE_ADMIN');
+    
+    // Parse Dining Info for Guests
+    if (!isAdmin.value) {
+        diningInfo.value = {
+            mode: payload.diningMode, // 'DINE_IN' or 'TAKEOUT'
+            table: payload.tableNumber
+        };
+    } else {
+        diningInfo.value = null;
+    }
   } catch (e) {
     isAdmin.value = false;
+    diningInfo.value = null;
   }
 };
 const token = ref(localStorage.getItem('token'));
@@ -78,12 +92,25 @@ onMounted(() => {
               
               <div class="h-6 w-px bg-white/20 mx-2"></div>
               
-              <router-link v-if="!token" to="/login" class="text-white/80 hover:text-white text-sm font-medium hover:underline">
-                Sign In
-              </router-link>
-              <button v-else @click="handleLogout" class="text-white/80 hover:text-white text-sm font-medium hover:underline">
-                Logout
-              </button>
+              <!-- Guest Status & Switch Mode -->
+              <div v-if="!isAdmin && diningInfo" class="flex items-center gap-3">
+                  <span class="text-white/90 text-sm bg-white/10 px-3 py-1 rounded-full">
+                      {{ diningInfo.mode === 'DINE_IN' ? `Dine-in ${diningInfo.table ? '#' + diningInfo.table : ''}` : 'Takeout' }}
+                  </span>
+                  <button @click="handleLogout" class="bg-white text-orange-600 hover:bg-orange-50 px-3 py-1 rounded-md text-sm font-bold transition-colors shadow-sm">
+                    Switch Mode
+                  </button>
+              </div>
+
+              <!-- Admin Logout / Guest Sign In -->
+              <div v-else class="flex items-center">
+                  <router-link v-if="!token" to="/login" class="text-white/80 hover:text-white text-sm font-medium hover:underline">
+                    Sign In
+                  </router-link>
+                  <button v-else @click="handleLogout" class="text-white/80 hover:text-white text-sm font-medium hover:underline">
+                    Logout
+                  </button>
+              </div>
             </div>
         </div>
 
@@ -109,13 +136,25 @@ onMounted(() => {
           
           <div class="h-px bg-white/20 mx-2 my-2"></div>
           
-          <router-link v-if="!token" to="/login" class="text-left text-white/90 hover:bg-white/10 px-4 py-3 rounded-md font-medium" @click="isMenuOpen = false">
-             Sign In
-          </router-link>
-          <button v-else @click="() => { isMenuOpen = false; handleLogout(); }" class="text-left text-white/90 hover:bg-white/10 px-4 py-3 rounded-md font-medium">
-             Logout
-          </button>
-      </div>
+          <!-- Mobile Guest Status -->
+          <div v-if="!isAdmin && diningInfo" class="px-4 py-2">
+              <span class="text-white/90 text-sm bg-white/10 px-3 py-1 rounded-full block w-fit mb-2">
+                  {{ diningInfo.mode === 'DINE_IN' ? `Dine-in ${diningInfo.table ? '#' + diningInfo.table : ''}` : 'Takeout' }}
+              </span>
+              <button @click="() => { isMenuOpen = false; handleLogout(); }" class="text-center w-full bg-white text-orange-600 hover:bg-orange-50 px-4 py-3 rounded-md font-bold transition-colors">
+                 Switch Mode
+              </button>
+          </div>
+
+          <div v-else>
+              <router-link v-if="!token" to="/login" class="text-left text-white/90 hover:bg-white/10 px-4 py-3 rounded-md font-medium block" @click="isMenuOpen = false">
+                 Sign In
+              </router-link>
+              <button v-else @click="() => { isMenuOpen = false; handleLogout(); }" class="text-left w-full text-white/90 hover:bg-white/10 px-4 py-3 rounded-md font-medium block">
+                 Logout
+              </button>
+          </div>
+       </div>
 
     </nav>
     <ErrorBoundary>
