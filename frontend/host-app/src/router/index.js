@@ -28,11 +28,11 @@ const AdminDashboard = defineAsyncComponent(() =>
 
 const routes = [
     { path: '/', redirect: '/menu' },
-    { path: '/login', component: Login, meta: { guest: true, hideNavbar: true } },
-    { path: '/staff/login', component: StaffLogin, meta: { guest: true, hideNavbar: true } },
-    { path: '/menu', component: MenuList, meta: { requiresAuth: false } },
-    { path: '/my-orders', component: MyOrders, meta: { requiresAuth: false } }, // Allowed for Guest Tokens too
-    { path: '/admin', component: AdminDashboard, meta: { requiresAuth: true, roles: ['ROLE_ADMIN'] } }
+    { path: '/login', component: Login, meta: { guest: true, layout: 'AuthLayout' } },
+    { path: '/staff/login', component: StaffLogin, meta: { guest: true, layout: 'AuthLayout' } },
+    { path: '/menu', component: MenuList, meta: { requiresAuth: false, layout: 'CustomerLayout' } },
+    { path: '/my-orders', component: MyOrders, meta: { requiresAuth: false, layout: 'CustomerLayout' } }, // Allowed for Guest Tokens too
+    { path: '/admin', component: AdminDashboard, meta: { requiresAuth: true, roles: ['ROLE_ADMIN'], layout: 'AdminLayout' } }
 ]
 
 const router = createRouter({

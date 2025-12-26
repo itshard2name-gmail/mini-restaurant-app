@@ -22,11 +22,11 @@
 
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
        <!-- Revenue Trend Chart -->
-       <div class="lg:col-span-2 bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+       <div class="lg:col-span-2 bg-card rounded-2xl shadow-sm border border-border p-6">
           <div class="flex items-center justify-between mb-6">
              <div>
-                <h3 class="text-lg font-bold text-gray-900">Revenue Trends</h3>
-                <p class="text-xs text-gray-500">Last 7 days performance</p>
+                <h3 class="text-lg font-bold text-card-foreground">Revenue Trends</h3>
+                <p class="text-xs text-muted-foreground">Last 7 days performance</p>
              </div>
           </div>
           <div class="h-80" v-if="!loading">
@@ -42,8 +42,8 @@
        </div>
 
        <!-- Revenue Distribution Pie -->
-       <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 flex flex-col">
-           <h3 class="text-lg font-bold text-gray-900 mb-6">Revenue Mix</h3>
+       <div class="bg-card rounded-2xl shadow-sm border border-border p-6 flex flex-col">
+           <h3 class="text-lg font-bold text-card-foreground mb-6">Revenue Mix</h3>
            <div class="h-64 flex-1" v-if="!loading">
               <apexchart 
                 width="100%" 
@@ -55,38 +55,38 @@
            </div>
            
            <!-- AOV Stats -->
-           <div class="mt-4 grid grid-cols-2 gap-4 border-t pt-4">
+           <div class="mt-4 grid grid-cols-2 gap-4 border-t border-border pt-4">
                <div class="text-center">
-                   <p class="text-xs text-gray-500 uppercase">Dine-In AOV</p>
-                   <p class="text-lg font-bold text-indigo-600">${{ aovStats.dineIn.toFixed(2) }}</p>
+                   <p class="text-xs text-muted-foreground uppercase">Dine-In AOV</p>
+                   <p class="text-lg font-bold text-indigo-500">${{ aovStats.dineIn.toFixed(2) }}</p>
                </div>
                <div class="text-center">
-                   <p class="text-xs text-gray-500 uppercase">Takeout AOV</p>
-                   <p class="text-lg font-bold text-emerald-600">${{ aovStats.takeout.toFixed(2) }}</p>
+                   <p class="text-xs text-muted-foreground uppercase">Takeout AOV</p>
+                   <p class="text-lg font-bold text-emerald-500">${{ aovStats.takeout.toFixed(2) }}</p>
                </div>
            </div>
        </div>
 
        <!-- Top Items -->
-       <div class="lg:col-span-3 bg-white rounded-2xl shadow-sm border border-gray-100 p-6 flex flex-col">
-          <h3 class="text-lg font-bold text-gray-900 mb-6">Top Selling Items</h3>
+       <div class="lg:col-span-3 bg-card rounded-2xl shadow-sm border border-border p-6 flex flex-col">
+          <h3 class="text-lg font-bold text-card-foreground mb-6">Top Selling Items</h3>
           
           <div class="space-y-5 flex-1 overflow-y-auto pr-2 custom-scrollbar">
              <div v-for="(item, idx) in topItems" :key="idx" class="relative group">
                 <div class="flex items-center justify-between z-10 relative mb-1">
                     <div class="flex items-center space-x-3 w-full max-w-[70%]">
                        <!-- Rank Badge -->
-                       <div v-if="idx === 0" class="flex-shrink-0 w-8 h-8 rounded-full bg-yellow-100 text-yellow-600 flex items-center justify-center font-bold ring-2 ring-yellow-50 text-base shadow-sm">🥇</div>
-                       <div v-else-if="idx === 1" class="flex-shrink-0 w-8 h-8 rounded-full bg-gray-100 text-gray-600 flex items-center justify-center font-bold ring-2 ring-gray-50 text-base shadow-sm">🥈</div>
-                       <div v-else-if="idx === 2" class="flex-shrink-0 w-8 h-8 rounded-full bg-orange-100 text-orange-700 flex items-center justify-center font-bold ring-2 ring-orange-50 text-base shadow-sm">🥉</div>
-                       <div v-else class="flex-shrink-0 w-8 h-8 rounded-full bg-gray-50 text-gray-400 flex items-center justify-center font-bold text-sm border border-gray-100">{{ idx + 1 }}</div>
+                       <div v-if="idx === 0" class="flex-shrink-0 w-8 h-8 rounded-full bg-yellow-900/40 text-yellow-400 flex items-center justify-center font-bold ring-2 ring-yellow-700/50 text-base shadow-sm">🥇</div>
+                       <div v-else-if="idx === 1" class="flex-shrink-0 w-8 h-8 rounded-full bg-gray-700 text-gray-300 flex items-center justify-center font-bold ring-2 ring-gray-600 text-base shadow-sm">🥈</div>
+                       <div v-else-if="idx === 2" class="flex-shrink-0 w-8 h-8 rounded-full bg-orange-900/40 text-orange-400 flex items-center justify-center font-bold ring-2 ring-orange-700/50 text-base shadow-sm">🥉</div>
+                       <div v-else class="flex-shrink-0 w-8 h-8 rounded-full bg-muted text-muted-foreground flex items-center justify-center font-bold text-sm border border-border">{{ idx + 1 }}</div>
 
-                       <span class="font-semibold text-gray-700 truncate text-sm">{{ item.name }}</span>
+                       <span class="font-semibold text-card-foreground truncate text-sm">{{ item.name }}</span>
                     </div>
-                    <span class="text-sm font-bold text-gray-900">{{ item.quantity }} <span class="text-xs font-normal text-gray-400 ml-0.5">sold</span></span>
+                    <span class="text-sm font-bold text-card-foreground">{{ item.quantity }} <span class="text-xs font-normal text-muted-foreground ml-0.5">sold</span></span>
                 </div>
                 <!-- Progress Bar -->
-                <div class="h-2 w-full bg-gray-100 rounded-full overflow-hidden">
+                <div class="h-2 w-full bg-muted rounded-full overflow-hidden">
                     <div class="h-full rounded-full transition-all duration-1000 ease-out"
                          :class="{
                             'bg-yellow-400': idx === 0,
@@ -181,7 +181,7 @@ const chartOptions = ref({
       }
    },
    grid: {
-      borderColor: '#f3f4f6',
+      borderColor: '#374151',
       strokeDashArray: 4,
       padding: { top: 10, right: 10, bottom: 10, left: 10 }
    },

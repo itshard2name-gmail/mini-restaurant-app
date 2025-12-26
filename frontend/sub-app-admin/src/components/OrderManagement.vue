@@ -3,24 +3,24 @@
       <!-- Header Section -->
       <div class="flex items-center justify-between mb-8">
         <div>
-          <h2 class="text-2xl font-bold text-gray-900 tracking-tight">Active Orders</h2>
-          <p class="mt-1 text-sm text-gray-500">Real-time order tracking</p>
+          <h2 class="text-2xl font-bold text-foreground tracking-tight">Active Orders</h2>
+          <p class="mt-1 text-sm text-muted-foreground">Real-time order tracking</p>
         </div>
         <div class="flex gap-2">
-            <Badge variant="secondary" class="px-5 py-2.5 text-sm font-semibold shadow-md">
+            <Badge variant="secondary" class="px-5 py-2.5 text-sm font-semibold shadow-md bg-primary text-primary-foreground hover:bg-primary/90 border border-primary/30">
             {{ orders.filter(o => ['PENDING', 'PAID', 'PREPARING', 'READY'].includes(o.status)).length }} Active
             </Badge>
-            <Badge variant="outline" class="px-5 py-2.5 text-sm font-semibold shadow-sm">
+            <Badge variant="outline" class="px-5 py-2.5 text-sm font-semibold shadow-sm text-muted-foreground border-border bg-card">
             {{ totalElements }} Total
             </Badge>
         </div>
       </div>
       
       <!-- Smart Search Bar -->
-      <div class="mb-6 bg-white p-4 rounded-xl border border-gray-100 shadow-sm flex flex-col md:flex-row gap-4 items-center justify-between">
+      <div class="mb-6 bg-card p-4 rounded-xl border border-border shadow-sm flex flex-col md:flex-row gap-4 items-center justify-between">
           <div class="relative w-full md:w-96">
               <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                <svg class="h-5 w-5 text-gray-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                <svg class="h-5 w-5 text-muted-foreground" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
                   <path fill-rule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clip-rule="evenodd" />
                 </svg>
               </div>
@@ -28,7 +28,7 @@
                 v-model="searchQuery" 
                 type="text" 
                 placeholder="Search Order ID or Customer Name..." 
-                class="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm transition duration-150 ease-in-out"
+                class="block w-full pl-10 pr-3 py-2 border border-input rounded-md leading-5 bg-background text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:border-ring sm:text-sm transition duration-150 ease-in-out"
               >
           </div>
           
@@ -36,7 +36,7 @@
              <input 
                v-model="dateFilter"
                type="date" 
-               class="block w-full md:w-auto pl-3 pr-10 py-2 border border-gray-300 rounded-md leading-5 bg-white focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+               class="block w-full md:w-auto pl-3 pr-10 py-2 border border-input rounded-md leading-5 bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:border-ring sm:text-sm"
              >
              <Button 
                v-if="searchQuery || dateFilter"
@@ -59,7 +59,7 @@
       </div>
 
       <!-- Tabs Navigation (Hidden when searching) -->
-      <div v-if="!isSearchActive" class="mb-8 border-b border-gray-200">
+      <div v-if="!isSearchActive" class="mb-8 border-b border-border">
         <nav class="-mb-px flex space-x-8" aria-label="Tabs">
           <button
             v-for="tab in tabs"
@@ -67,16 +67,16 @@
             @click="currentTab = tab.name"
             :class="[
               currentTab === tab.name
-                ? 'border-indigo-500 text-indigo-600'
-                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300',
-              'whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm flex items-center gap-2'
+                ? 'border-primary text-primary'
+                : 'border-transparent text-muted-foreground hover:text-foreground hover:border-border',
+              'whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm flex items-center gap-2 transition-colors'
             ]"
           >
             {{ tab.label }}
             <span
               v-if="getOrderCount(tab.filters) > 0"
               :class="[
-                currentTab === tab.name ? 'bg-indigo-100 text-indigo-600' : 'bg-gray-100 text-gray-900',
+                currentTab === tab.name ? 'bg-indigo-900/50 text-indigo-300' : 'bg-gray-800 text-gray-400',
                 'hidden ml-2 py-0.5 px-2.5 rounded-full text-xs font-medium md:inline-block'
               ]"
             >
@@ -119,15 +119,15 @@
       <!-- Orders Grid -->
       <div v-else class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
         
-        <Card v-for="order in orders" :key="order.id" class="shadow-sm hover:shadow-xl transition-all duration-300 border-gray-200 overflow-hidden group flex flex-col">
+        <Card v-for="order in orders" :key="order.id" class="shadow-lg hover:shadow-2xl hover:shadow-primary/20 transition-all duration-300 border-border bg-card overflow-hidden group flex flex-col">
           
           <!-- Card Header -->
-          <CardHeader class="px-6 py-5 border-b border-gray-100 bg-white relative space-y-0 block">
+          <CardHeader class="px-6 py-5 border-b border-border bg-card relative space-y-0 block">
              <div class="flex justify-between items-start">
                <div>
-                  <span class="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">Order ID</span>
-                  <CardTitle class="text-2xl font-black text-gray-800 leading-none">#{{ order.id }}</CardTitle>
-                  <CardDescription class="mt-1 text-xs text-gray-500 font-medium">
+                  <span class="block text-xs font-bold text-muted-foreground uppercase tracking-wider mb-1">Order ID</span>
+                  <CardTitle class="text-3xl font-black text-card-foreground leading-none tracking-tight">#{{ order.id }}</CardTitle>
+                  <CardDescription class="mt-1 text-xs text-muted-foreground font-medium">
                     {{ formatDate(order.createdAt) }}
                   </CardDescription>
                </div>
@@ -135,22 +135,23 @@
                   :variant="statusVariant(order.status)" 
                   class="px-3 py-1 text-xs font-bold rounded-full uppercase tracking-wider"
                   :class="{
-                    'bg-orange-100 text-orange-800 hover:bg-orange-100 border-orange-200': order.status === 'READY',
-                     'bg-yellow-100 text-yellow-800 hover:bg-yellow-100 border-yellow-200': order.status === 'PREPARING'
+                    'bg-orange-100 text-orange-800 border-orange-200 dark:bg-orange-900/40 dark:text-orange-200 dark:border-orange-700/50 hover:bg-orange-100 dark:hover:bg-orange-900/60': order.status === 'READY',
+                     'bg-yellow-100 text-yellow-800 border-yellow-200 dark:bg-yellow-900/40 dark:text-yellow-200 dark:border-yellow-700/50 hover:bg-yellow-100 dark:hover:bg-yellow-900/60': order.status === 'PREPARING'
                    }"
                 >
                    {{ order.status }}
                 </Badge>
+
               </div>
               
               <!-- Dining Mode Badge -->
               <div class="mt-4 flex items-center">
-                  <Badge v-if="order.orderType === 'DINE_IN'" variant="secondary" class="bg-indigo-50 text-indigo-700 border-indigo-100 flex items-center gap-1.5 px-3 py-1">
+                  <Badge v-if="order.orderType === 'DINE_IN'" variant="secondary" class="bg-primary text-primary-foreground shadow-sm flex items-center gap-1.5 px-3 py-1 border border-primary/50">
                       <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2"/><path d="M7 2v20"/><path d="M21 15V2v0a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3Zm0 0v7"/></svg>
                       <span class="font-bold">Table {{ order.tableNumber }}</span>
                   </Badge>
                   
-                  <Badge v-if="order.orderType === 'TAKEOUT'" variant="secondary" class="bg-emerald-50 text-emerald-700 border-emerald-100 flex items-center gap-1.5 px-3 py-1">
+                  <Badge v-if="order.orderType === 'TAKEOUT'" variant="secondary" class="bg-emerald-100 text-emerald-800 border-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-300 dark:border-emerald-500/30 flex items-center gap-1.5 px-3 py-1 border">
                       <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="18" x2="23" y1="8" y2="13"/><line x1="23" x2="18" y1="13" y2="13"/></svg>
                       <span class="font-bold">Takeout</span>
                   </Badge>
@@ -162,29 +163,29 @@
             
             <!-- Customer Info -->
             <div>
-              <span class="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">Customer</span>
+              <span class="block text-xs font-bold text-muted-foreground uppercase tracking-wider mb-3">Customer</span>
               <div class="flex items-center">
-                 <div class="h-10 w-10 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center shadow-sm text-white font-bold text-sm shrink-0">
+                 <div class="h-10 w-10 rounded-full bg-gradient-to-br from-indigo-600 to-purple-800 flex items-center justify-center shadow-lg text-white font-bold text-sm shrink-0 border border-white/10">
                     {{ order.userId ? order.userId.charAt(0).toUpperCase() : 'U' }}
                  </div>
                  <div class="ml-3">
-                   <p class="text-sm font-bold text-gray-900 truncate">{{ order.userId || 'Guest User' }}</p>
-                   <p class="text-xs text-gray-500">Online Customer</p>
+                   <p class="text-sm font-bold text-card-foreground truncate">{{ order.userId || 'Guest User' }}</p>
+                   <p class="text-xs text-muted-foreground">Online Customer</p>
                  </div>
               </div>
             </div>
 
             <!-- Items List -->
             <div class="flex-1">
-              <span class="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">Order Items</span>
+              <span class="block text-xs font-bold text-muted-foreground uppercase tracking-wider mb-3">Order Items</span>
               <ul class="space-y-2">
-                <li v-for="item in order.items" :key="item.id" class="flex flex-col text-sm p-3 rounded-lg bg-gray-50 border border-gray-100">
+                <li v-for="item in order.items" :key="item.id" class="flex flex-col text-sm p-3 rounded-lg bg-background/50 border border-border">
                   <div class="flex items-center justify-between w-full">
-                    <span class="font-medium text-gray-700 truncate mr-2">{{ item.snapshotName }}</span>
-                    <Badge variant="outline" class="flex-shrink-0 bg-white px-2 py-0.5 text-xs font-bold text-gray-600 border-gray-200 shadow-sm">x{{ item.quantity }}</Badge>
+                    <span class="font-medium text-foreground truncate mr-2">{{ item.snapshotName }}</span>
+                    <Badge variant="outline" class="flex-shrink-0 bg-background px-2 py-0.5 text-xs font-bold text-muted-foreground border-border shadow-sm">x{{ item.quantity }}</Badge>
                   </div>
-                  <div v-if="item.notes" class="mt-2 text-xs text-gray-500 italic bg-white p-1.5 rounded border border-gray-100">
-                    <span class="font-bold not-italic">Note:</span> {{ item.notes }}
+                  <div v-if="item.notes" class="mt-2 text-xs text-gray-400 italic bg-gray-800 p-1.5 rounded border border-gray-700/50">
+                    <span class="font-bold not-italic text-indigo-400">Note:</span> {{ item.notes }}
                   </div>
                 </li>
               </ul>
@@ -192,10 +193,10 @@
           </CardContent>
 
           <!-- Card Footer -->
-          <CardFooter class="px-6 py-5 bg-gray-50 border-t border-gray-100 flex flex-col justify-end items-stretch">
+          <CardFooter class="px-6 py-5 bg-muted/50 border-t border-border flex flex-col justify-end items-stretch">
              <div class="flex justify-between items-center mb-5 w-full">
-                <span class="text-xs font-bold text-gray-500 uppercase tracking-wide">Total Amount</span>
-                <span class="text-2xl font-black text-gray-900">${{ order.totalPrice.toFixed(2) }}</span>
+                <span class="text-xs font-bold text-muted-foreground uppercase tracking-wide">Total Amount</span>
+                <span class="text-2xl font-black text-white">${{ order.totalPrice.toFixed(2) }}</span>
              </div>
 
              <!-- Action Buttons -->
@@ -223,12 +224,12 @@
                 </Button>
                 
                 <!-- Completed State -->
-                <div v-if="order.status === 'COMPLETED'" class="flex items-center justify-center py-2 text-sm text-emerald-600 font-medium bg-emerald-50 rounded-lg border border-emerald-100">
+                <div v-if="order.status === 'COMPLETED'" class="flex items-center justify-center py-2 text-sm text-emerald-400 font-medium bg-emerald-900/10 rounded-lg border border-emerald-900/30">
                    <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
                    <span>Order has been fulfilled</span>
                 </div>
                 <!-- Cancelled State -->
-                 <div v-if="order.status === 'CANCELLED'" class="flex items-center justify-center py-2 text-sm text-red-600 font-medium bg-red-50 rounded-lg border border-red-100">
+                 <div v-if="order.status === 'CANCELLED'" class="flex items-center justify-center py-2 text-sm text-red-400 font-medium bg-red-900/10 rounded-lg border border-red-900/30">
                    <span>Order Cancelled</span>
                 </div>
              </div>

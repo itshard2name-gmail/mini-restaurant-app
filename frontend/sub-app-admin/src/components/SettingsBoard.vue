@@ -1,28 +1,28 @@
 <template>
   <div class="max-w-4xl mx-auto space-y-6">
      <Toast :show="showToast" :message="toastMessage" :type="toastType" />
-     <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-8">
-        <h2 class="text-2xl font-bold text-gray-900 mb-6">General Settings</h2>
+     <div class="bg-card rounded-2xl shadow-sm border border-border p-8">
+        <h2 class="text-2xl font-bold text-card-foreground mb-6">General Settings</h2>
         
         <div class="space-y-6">
            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
               <!-- Timezone Setting -->
               <div class="space-y-2">
-                 <label class="block text-sm font-medium text-gray-700">Store Timezone</label>
+                 <label class="block text-sm font-medium text-muted-foreground">Store Timezone</label>
                  <select v-model="settings.TIMEZONE" 
-                         class="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2.5 border">
+                         class="block w-full rounded-md border-input bg-background text-foreground shadow-sm focus:border-ring focus:ring-ring sm:text-sm p-2.5 border">
                      <option v-for="zone in timezones" :key="zone" :value="zone">{{ zone }}</option>
                  </select>
-                 <p class="text-xs text-gray-500">This affects how "Today's Revenue" is calculated.</p>
+                 <p class="text-xs text-muted-foreground">This affects how "Today's Revenue" is calculated.</p>
               </div>
 
                <!-- Table Configuration -->
                <div class="space-y-2">
-                   <label class="block text-sm font-medium text-gray-700">Available Tables</label>
+                   <label class="block text-sm font-medium text-muted-foreground">Available Tables</label>
                    <input type="text" v-model="settings.TABLE_LIST" 
                           placeholder="e.g. 1,2,3,4,VIP1"
-                          class="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2.5 border" />
-                   <p class="text-xs text-gray-500">Comma separated list (e.g. "1,2,3,VIP"). Used for Dine-In selection.</p>
+                          class="block w-full rounded-md border-input bg-background text-foreground shadow-sm focus:border-ring focus:ring-ring sm:text-sm p-2.5 border" />
+                   <p class="text-xs text-muted-foreground">Comma separated list (e.g. "1,2,3,VIP"). Used for Dine-In selection.</p>
                </div>
             </div>
            

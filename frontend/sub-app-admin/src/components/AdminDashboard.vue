@@ -1,25 +1,25 @@
 <template>
-  <!-- Isolation Wrapper -->
-  <div id="admin-wrapper" class="admin-scope text-foreground bg-background"> <!-- "Fake Body" styles applied here -->
-    
-    <div id="sub-app-admin" class="bg-gray-100 min-h-screen font-sans">
+  <!-- Isolation Wrapper: Inherit Dark Mode -->
+  <div id="admin-wrapper" class="admin-scope text-foreground bg-background"> <!-- "Fake Body" styles applied here -->    
+    <!-- Main Container -->
+    <div id="sub-app-admin" class="bg-background min-h-screen font-sans text-foreground">
       <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         
         <!-- Top Navigation Header -->
-        <div class="flex flex-col md:flex-row items-center justify-between mb-8 pb-6 border-b border-gray-200">
+        <div class="flex flex-col md:flex-row items-center justify-between mb-8 pb-6 border-b border-border">
           <div>
-            <h1 class="text-3xl font-extrabold text-gray-900 tracking-tight">Admin Dashboard</h1>
-            <p class="mt-2 text-sm text-gray-500">Manage your restaurant operations</p>
+            <h1 class="text-3xl font-extrabold text-foreground tracking-tight">Admin Dashboard</h1>
+            <p class="mt-2 text-sm text-muted-foreground">Manage your restaurant operations</p>
           </div>
           
           <!-- Navigation Tabs -->
-          <div class="mt-4 md:mt-0 bg-white p-1 rounded-lg border border-gray-200 shadow-sm flex space-x-1">
+          <div class="mt-4 md:mt-0 bg-muted p-1.5 rounded-lg border border-border shadow-sm flex space-x-1">
              <button 
                v-for="nav in navigation" 
                :key="nav.name"
                @click="currentTab = nav.name"
                :class="['px-4 py-2 text-sm font-medium rounded-md transition-all duration-200', 
-                        currentTab === nav.name ? 'bg-indigo-50 text-indigo-700 shadow-sm' : 'text-gray-500 hover:text-gray-900 hover:bg-gray-50']"
+                        currentTab === nav.name ? 'bg-background text-primary shadow-sm border border-border' : 'text-muted-foreground hover:text-foreground hover:bg-background/50']"
              >
                {{ nav.label }}
              </button>
