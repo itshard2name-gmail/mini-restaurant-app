@@ -502,3 +502,110 @@ sequenceDiagram
 -   **進行中 (WIP)**: Inventory V2 (Stock tracking)。
 
 ---
+
+## 10. 用餐模式切換與訂單合併邏輯 (Dining Mode Switching & Order Merging Logic)
+
+> [!NOTE]
+> 本節詳細說明了「影子訪客 Token (Shadow Guest Token)」策略，用於處理匿名 (內用) 與 已驗證 (外帶) 狀態之間複雜的訂單歸屬權轉移。
+
+### 10.1 業務邏輯概覽 (產品觀點)
+
+### 目標
+提供無縫的顧客旅程，讓使用者可以匿名開始點餐 (例如：在餐桌上)，並在稍後登入時「認領」這些訂單，且不會遺失資料。
+
+### 用戶故事 (User Story)
+1.  **訪客情境 (內用)**: 顧客掃描「桌號 5」的 QR Code。他們以 `Table-5` (半匿名狀態) "登入" 並下單。
+2.  **轉換**: 顧客決定改為外帶或想要累積點數。他們切換至「外帶模式 (Takeout Mode)」。
+3.  **驗證**: 外帶模式需要額外的身分驗證 (手機號碼)。顧客進行登入。
+4.  **合併與保留**: 登入成功後，系統自動識別 *此特定裝置* 之前以「Table 5」建立的訂單，並將其合併至使用者的永久帳戶歷史紀錄中。
+
+---
+
+### 10.2 技術架構 (技術觀點)
+
+### 核心挑戰
+標準的 JWT 方法將 `Table-5` 與 `User-09123` 視為兩個完全獨立的身分。當使用者登入時，JWT 會被替換，導致與 `Table-5` Session 的連結通常會遺失。
+
+### 解法：影子訪客 Token 策略 (Shadow Guest Token Strategy)
+我們引入了一個次級的、持久的識別符，稱為 **影子訪客 Token (Shadow Guest Token)**。
+*   **定義**: 後端在建立第一筆訂單時生成的長效 UUID。
+*   **儲存**: 持久化於瀏覽器的 `localStorage` (`guest_order_token`)。
+*   **目的**: 作為一座「橋樑」，將裝置的 Session 與其訂單連結起來，獨立於當前的驗證狀態 (`userId`) 之外。
+
+### Token 類型與層級
+| Token 類型 | 儲存 Key | 用途 | 生命週期 |
+| :--- | :--- | :--- | :--- |
+| **Auth Token** | `token` | 識別使用者 (Subject) | 登入/登出時改變 |
+| **Shadow Token** | `guest_order_token` | 識別裝置/Session | 跨越登入/登出持續存在，直到合併完成 |
+
+---
+
+### 10.3 實作細節
+
+### 10.3.1 圖表：端對端流程 (循序圖)
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor User
+    participant Frontend (Cart)
+    participant Backend (OrderService)
+    participant Database
+    participant Frontend (Login)
+
+    Note over User, Database: 第一階段：匿名內用點餐
+    User->>Frontend (Cart): 送出訂單 (內用)
+    Frontend (Cart)->>Backend (OrderService): POST /orders (userId="Table-5", guestToken=null)
+    Backend (OrderService)->>Backend (OrderService): 偵測到 null guestToken -> 生成 UUID
+    Backend (OrderService)->>Database: 儲存訂單 (id=101, userId="Table-5", guestToken="UUID-A")
+    Backend (OrderService)-->>Frontend (Cart): 回傳訂單 (包含 guestToken="UUID-A")
+    Frontend (Cart)->>Frontend (Cart): localStorage.setItem('guest_order_token', 'UUID-A')
+
+    Note over User, Database: 第二階段：模式切換與登入
+    User->>Frontend (Login): 切換模式 -> 外帶 -> 登入 (手機號)
+    Frontend (Login)->>Backend (Auth): POST /login
+    Backend (Auth)-->>Frontend (Login): 回傳 JWT (Subject="User-Phone")
+
+    Note over User, Database: 第三階段：訂單合併
+    Frontend (Login)->>Frontend (Login): 檢查 localStorage 是否有 'guest_order_token'
+    Frontend (Login)->>Backend (OrderService): POST /orders/merge (guestToken="UUID-A")
+    Backend (OrderService)->>Database: UPDATE orders SET userId="User-Phone" WHERE guestToken="UUID-A"
+    Database-->>Backend (OrderService): Rows Updated
+    Backend (OrderService)-->>Frontend (Login): 成功 (Success)
+    Frontend (Login)->>Frontend (Login): localStorage.removeItem('guest_order_token')
+```
+
+### 10.3.2 圖表：訂單歸屬權狀態機
+
+```mermaid
+stateDiagram-v2
+    [*] --> Created_Guest : 訪客下單
+    Created_Guest --> Owned_By_Table : 系統指派 userId="Table-X"
+    Owned_By_Table --> Owned_By_Table : 附著 Guest Token "UUID-A" 
+    
+    Owned_By_Table --> Merged_To_User : 使用者登入 + 呼叫合併
+    
+    state Merged_To_User {
+        [*] --> Updated
+        Updated --> userId_is_Phone
+        userId_is_Phone --> guestToken_Preserved : 用於稽核
+    }
+```
+
+### 10.3.3 關鍵邏輯步驟
+
+#### A. 建立訂單 (`OrderService.createOrder`)
+1.  **輸入**: 請求可能包含或不包含 `userId` (例如：Table-5)。
+2.  **檢查**: 若 `request.guestToken` 為空，則生成 `UUID.randomUUID()`。
+3.  **持久化**: 儲存 `order.setGuestToken(token)`。
+4.  **回傳**: 回傳完整的 Entity，以便前端能取得生成的 Token。
+
+#### B. 前端持久化 (`Cart.vue`)
+1.  **發送**: 總是檢查 `localStorage`，若有 `guestToken` 則隨請求發送。
+2.  **接收**: 收到回應時，檢查是否存在 `response.data.guestToken`。
+3.  **儲存**: `localStorage.setItem('guest_order_token', token)`。
+
+#### C. 合併操作 (`OrderService.mergeGuestOrders`)
+*   **觸發**: 在 `Login.vue` 登入成功後立即呼叫。
+*   **查詢**: `UPDATE Order o SET o.userId = :currentUserId WHERE o.guestToken = :guestToken`
+*   **限制**: 查詢 **不應** 檢查 `userId IS NULL`。它必須覆寫現有的 `userId` (即使原本是 `Table-5`)，以有效地將歸屬權「轉移」給真實使用者。
