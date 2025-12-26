@@ -362,7 +362,7 @@ onUnmounted(() => {
 </script>
 
 <template>
-    <div id="sub-app-menu" class="bg-gray-50/50 min-h-screen">
+    <div id="sub-app-menu" class="min-h-screen">
         <DiningModeDialog />
         <DiningStatusBar :diningInfo="diningInfo" @change-mode="handleChangeMode" />
         

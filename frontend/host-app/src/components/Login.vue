@@ -1,7 +1,8 @@
 <script setup>
-import { ref } from 'vue';
+import { ref, onMounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import request from '../utils/request';
+import { useSettings } from '../composables/useSettings';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -9,45 +10,35 @@ import { Label } from '@/components/ui/label';
 
 const router = useRouter();
 const route = useRoute();
+const { settings, fetchSettings } = useSettings();
 
 const phone = ref('');
-const diningMode = ref('DINE_IN'); // 'DINE_IN' or 'TAKEOUT'
-const tableNumber = ref('');
 const errorMsg = ref('');
 const isLoading = ref(false);
+const diningContext = ref(null); // 'DINE_IN' or 'TAKEOUT'
+const tableContext = ref(null);
 
-// Fixed Mode logic for Checkout Redirect
-const isFixedMode = ref(false);
-
-import { onMounted } from 'vue';
 onMounted(() => {
-    if (route.query.mode && ['DINE_IN', 'TAKEOUT'].includes(route.query.mode)) {
-        diningMode.value = route.query.mode;
-        isFixedMode.value = true;
-    } else {
-        // Fallback: Check LocalStorage if mode is already set (Context Awareness)
-        try {
-            const savedInfo = JSON.parse(localStorage.getItem('diningInfo') || '{}');
-            if (savedInfo.mode === 'TAKEOUT') {
-                diningMode.value = 'TAKEOUT';
-                // If user is already in Takeout context, we treat it as fixed mode to avoid confusion
-                isFixedMode.value = true;
-            }
-        } catch (e) {}
+    fetchSettings();
+    // Context Awareness Logic
+    // 1. Check if we have an existing Dine-In session (from QR Scan)
+    try {
+        const savedInfo = JSON.parse(localStorage.getItem('diningInfo') || '{}');
+        if (savedInfo.mode === 'DINE_IN' && savedInfo.table) {
+            diningContext.value = 'DINE_IN';
+            tableContext.value = savedInfo.table;
+        } else {
+            // 2. Default to TAKEOUT (Remote / Fresh Session)
+            diningContext.value = 'TAKEOUT';
+        }
+    } catch (e) {
+        diningContext.value = 'TAKEOUT';
     }
 });
 
 const handleResponse = async (res) => {
     if (res.token) {
         localStorage.setItem('token', res.token);
-        
-        // Store Dining Info in LocalStorage (Frontend Persistence)
-        if (diningMode.value) {
-            localStorage.setItem('diningInfo', JSON.stringify({
-                mode: diningMode.value,
-                table: tableNumber.value
-            }));
-        }
         
         // Notify App.vue to update state immediately
         window.dispatchEvent(new Event('auth-change'));
@@ -83,7 +74,6 @@ const handleResponse = async (res) => {
                 router.push('/menu');
             }
         } else {
-            // Fallback
             localStorage.setItem('roles', '[]');
             router.push('/menu');
         }
@@ -96,19 +86,15 @@ const handleQuickLogin = async () => {
         return;
     }
     
-    if (diningMode.value === 'DINE_IN' && !tableNumber.value) {
-        errorMsg.value = "Please enter your table number";
-        return;
-    }
-    
     isLoading.value = true;
     errorMsg.value = '';
 
     try {
+        // Send resolved context
         const res = await request.post('/auth/quick-login', {
             phone: phone.value,
-            diningMode: diningMode.value,
-            tableNumber: diningMode.value === 'DINE_IN' ? tableNumber.value : null
+            diningMode: diningContext.value || 'TAKEOUT',
+            tableNumber: tableContext.value // May be null if TAKEOUT
         });
         handleResponse(res);
     } catch (e) {
@@ -121,47 +107,23 @@ const handleQuickLogin = async () => {
 </script>
 
 <template>
-  <div class="flex items-center justify-center min-h-screen bg-gray-50/50">
-     <div class="absolute inset-0 bg-gradient-to-r from-orange-500/10 to-red-600/10 z-0"></div>
+  <div class="flex items-center justify-center min-h-screen bg-background">
      
-     <Card class="w-full max-w-md z-10 shadow-xl border-t-4 border-t-primary">
+     <Card class="w-full max-w-md z-10 shadow-xl border-t-4 border-t-primary bg-card text-card-foreground">
          <CardHeader class="space-y-1 pb-6">
-             <CardTitle class="text-2xl font-bold text-center">Welcome</CardTitle>
-             <CardDescription class="text-center">
-                 Sign in to continue your order
+             <div class="text-center mb-2">
+                 <span class="text-xs font-semibold uppercase tracking-widest text-primary/80">{{ settings.BRAND_NAME }}</span>
+             </div>
+             <CardTitle class="text-2xl font-bold text-center text-foreground">Welcome</CardTitle>
+             <CardDescription class="text-center text-muted-foreground">
+                 Enter your mobile number to track your order
              </CardDescription>
          </CardHeader>
          
          <CardContent class="grid gap-4">
              <!-- Customer Login Form -->
              <div class="space-y-4">
-                 <!-- Dining Mode Selection -->
-                 <div v-if="!isFixedMode" class="grid grid-cols-2 gap-2 mb-4">
-                    <button 
-                        @click="diningMode = 'DINE_IN'"
-                        class="p-2 rounded-md font-medium text-sm transition-colors border-2"
-                        :class="diningMode === 'DINE_IN' ? 'border-primary bg-primary/10 text-primary' : 'border-transparent bg-gray-100 text-gray-600 hover:bg-gray-200'"
-                    >
-                        Accomo (Dine-in)
-                    </button>
-                    <button 
-                        @click="diningMode = 'TAKEOUT'"
-                        class="p-2 rounded-md font-medium text-sm transition-colors border-2"
-                        :class="diningMode === 'TAKEOUT' ? 'border-primary bg-primary/10 text-primary' : 'border-transparent bg-gray-100 text-gray-600 hover:bg-gray-200'"
-                    >
-                        Takeout
-                    </button>
-                 </div>
-
-                 <div v-if="diningMode === 'DINE_IN'" class="grid gap-2">
-                     <Label htmlFor="tableNumber">Table Number</Label>
-                     <Input 
-                        id="tableNumber" 
-                        v-model="tableNumber" 
-                        type="number" 
-                        placeholder="e.g. 5" 
-                     />
-                 </div>
+                 <!-- Smart Context: Only show Mobile Input -->
 
                  <div class="grid gap-2">
                      <Label htmlFor="phone">Mobile Number</Label>
@@ -169,13 +131,19 @@ const handleQuickLogin = async () => {
                         id="phone" 
                         v-model="phone" 
                         type="tel" 
+                        inputmode="numeric"
                         placeholder="0912345678" 
+                        class="text-lg h-12"
                         @keyup.enter="handleQuickLogin"
                      />
                  </div>
-                 <Button class="w-full bg-primary hover:bg-primary/90" @click="handleQuickLogin" :disabled="isLoading">
-                    {{ isLoading ? 'Processing...' : 'Start Ordering' }}
+                 <Button class="w-full bg-primary hover:bg-primary/90 h-10 text-base" @click="handleQuickLogin" :disabled="isLoading">
+                    {{ isLoading ? 'Processing...' : 'Track My Order' }}
                  </Button>
+                 
+                 <p class="text-[0.7rem] text-muted-foreground text-center">
+                    No password required. We only use this for your order.
+                 </p>
              </div>
              
              <p v-if="errorMsg" class="text-destructive text-sm font-medium text-center bg-destructive/10 p-2 rounded">{{ errorMsg }}</p>

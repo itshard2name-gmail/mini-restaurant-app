@@ -20,14 +20,14 @@ const modeTableText = computed(() => {
 </script>
 
 <template>
-    <div v-if="diningInfo" class="bg-white border-b border-gray-200 sticky top-0 z-40 shadow-sm transition-all duration-300">
+    <div v-if="diningInfo" class="bg-card border-b border-border sticky top-0 z-40 shadow-sm transition-all duration-300">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-14 flex items-center justify-between">
-            <div class="flex items-center gap-2 text-gray-800 font-bold text-lg">
+            <div class="flex items-center gap-2 text-card-foreground font-bold text-lg">
                 <span>{{ modeTableText }}</span>
             </div>
             <button 
                 @click="$emit('change-mode')"
-                class="px-4 py-1.5 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50 hover:text-orange-600 hover:border-orange-200 transition-colors"
+                class="px-4 py-1.5 border border-input rounded-md text-sm font-medium text-muted-foreground hover:bg-muted hover:text-orange-600 hover:border-orange-200 transition-colors"
             >
                 Change Mode
             </button>

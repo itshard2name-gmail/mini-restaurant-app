@@ -21,6 +21,9 @@ export { default as SheetFooter } from './components/sheet/SheetFooter.vue'
 export { default as SheetClose } from './components/sheet/SheetClose.vue'
 export { default as Toast } from './components/Toast.vue'
 
+export { default as Toaster } from './components/sonner/Toaster.vue'
+export { toast } from 'vue-sonner'
+
 // Export utils
 import { cn } from './lib/utils'
 export { cn }

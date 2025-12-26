@@ -16,6 +16,15 @@
                  <p class="text-xs text-muted-foreground">This affects how "Today's Revenue" is calculated.</p>
               </div>
 
+               <!-- Brand Name -->
+               <div class="space-y-2">
+                   <label class="block text-sm font-medium text-muted-foreground">Brand Name</label>
+                   <input type="text" v-model="settings.BRAND_NAME" 
+                          placeholder="e.g. Hipster Cafe"
+                          class="block w-full rounded-md border-input bg-background text-foreground shadow-sm focus:border-ring focus:ring-ring sm:text-sm p-2.5 border" />
+                   <p class="text-xs text-muted-foreground">Displayed on Navbar and Login page.</p>
+               </div>
+
                <!-- Table Configuration -->
                <div class="space-y-2">
                    <label class="block text-sm font-medium text-muted-foreground">Available Tables</label>
@@ -48,7 +57,8 @@ import { Toast } from '@mini-restaurant/ui';
 const saving = ref(false);
 const settings = ref({
    TIMEZONE: 'UTC',
-   TABLE_LIST: '1,2,3,4,5' 
+   TABLE_LIST: '1,2,3,4,5',
+   BRAND_NAME: 'Restaurant App' // Default
 });
 
 // Toast State
@@ -108,6 +118,12 @@ const saveSettings = async () => {
       // Save TABLE_LIST
       await axios.put('/api/orders/settings', 
          { settingKey: 'TABLE_LIST', settingValue: settings.value.TABLE_LIST },
+         { headers: { Authorization: `Bearer ${token}` } }
+      );
+
+      // Save BRAND_NAME
+      await axios.put('/api/orders/settings', 
+         { settingKey: 'BRAND_NAME', settingValue: settings.value.BRAND_NAME },
          { headers: { Authorization: `Bearer ${token}` } }
       );
       

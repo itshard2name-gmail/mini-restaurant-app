@@ -25,6 +25,11 @@ public class RestaurantSettingsController {
         return ResponseEntity.ok(settingsRepository.findAll());
     }
 
+    @GetMapping("/public")
+    public ResponseEntity<List<RestaurantSettings>> getPublicSettings() {
+        return ResponseEntity.ok(settingsRepository.findAll());
+    }
+
     @PutMapping
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<RestaurantSettings> updateSetting(@RequestBody RestaurantSettings setting) {

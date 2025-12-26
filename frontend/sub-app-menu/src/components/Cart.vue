@@ -241,14 +241,14 @@ const cartStore = useCartStore();
                                 <div class="flex items-center gap-3 bg-secondary/20 rounded-lg p-1">
                                     <button 
                                         @click="minusItem({ id: item.menuId })"
-                                        class="w-6 h-6 flex items-center justify-center rounded-md hover:bg-white shadow-sm transition-all text-sm font-bold disabled:opacity-50"
+                                        class="w-6 h-6 flex items-center justify-center rounded-md hover:bg-card shadow-sm transition-all text-sm font-bold disabled:opacity-50"
                                     >
                                         −
                                     </button>
                                     <span class="text-sm font-medium w-4 text-center">{{ item.quantity }}</span>
                                     <button 
                                         @click="addToCart({ id: item.menuId })"
-                                        class="w-6 h-6 flex items-center justify-center rounded-md hover:bg-white shadow-sm transition-all text-sm font-bold"
+                                        class="w-6 h-6 flex items-center justify-center rounded-md hover:bg-card shadow-sm transition-all text-sm font-bold"
                                     >
                                         +
                                     </button>

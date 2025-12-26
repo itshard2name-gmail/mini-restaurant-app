@@ -27,7 +27,8 @@
         "radix-vue": "^1.7.0",
         "reka-ui": "^2.6.1",
         "tailwind-merge": "^2.2.1",
-        "tailwindcss-animate": "^1.0.7"
+        "tailwindcss-animate": "^1.0.7",
+        "vue-sonner": "^2.0.9"
     },
     "devDependencies": {
         "@vitejs/plugin-vue": "^5.0.0",

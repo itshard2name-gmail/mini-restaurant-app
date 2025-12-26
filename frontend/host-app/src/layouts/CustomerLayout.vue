@@ -1,22 +1,38 @@
 <script setup>
-import { ref } from 'vue';
+import { ref, onMounted, onUnmounted } from 'vue';
 import { useAuth } from '../composables/useAuth';
+import { useCustomerTheme } from '../composables/useCustomerTheme';
+
+import { useSettings } from '../composables/useSettings';
 
 const { token, isAdmin, handleLogout } = useAuth();
+const { initTheme, setTheme, clearTheme, currentTheme, themes } = useCustomerTheme();
+const { settings, fetchSettings } = useSettings();
+
 const isMenuOpen = ref(false);
+const isThemeMenuOpen = ref(false);
+
+onMounted(() => {
+    initTheme();
+    fetchSettings();
+});
+
+onUnmounted(() => {
+    clearTheme();
+});
 </script>
 
 <template>
-  <div class="bg-gray-100 min-h-screen">
+  <div class="bg-[hsl(var(--background))] text-[hsl(var(--foreground))] min-h-screen transition-colors duration-300">
     <!-- Customer Navbar -->
-    <nav class="bg-gradient-to-r from-orange-500 to-red-600 shadow-lg p-4 mb-4 sticky top-0 z-[500] w-full">
+    <nav class="bg-[hsl(var(--primary))] shadow-lg p-4 sticky top-0 z-[500] w-full transition-colors duration-300">
       <div class="max-w-7xl mx-auto flex justify-between items-center">
         <div class="flex items-center gap-3">
           <!-- Logo -->
           <div class="bg-white/20 p-2 rounded-lg backdrop-blur-sm">
              <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
           </div>
-          <div class="font-extrabold text-2xl text-white tracking-tight">Restaurant App</div>
+          <div class="font-extrabold text-2xl text-white tracking-tight">{{ settings.BRAND_NAME }}</div>
         </div>
         
         <!-- Desktop Menu -->
@@ -36,6 +52,31 @@ const isMenuOpen = ref(false);
                  Dashboard
               </router-link>
               
+              <div class="h-6 w-px bg-white/20 mx-2"></div>
+              
+               <!-- Theme Dropdown -->
+               <div class="relative">
+                   <button @click="isThemeMenuOpen = !isThemeMenuOpen" class="text-white/80 hover:text-white flex items-center gap-1.5 px-3 py-2 rounded-md hover:bg-white/10 transition-colors">
+                       <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01"></path></svg>
+                       <span class="text-sm font-medium">Theme</span>
+                   </button>
+                   
+                   <div v-if="isThemeMenuOpen" class="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 z-50 ring-1 ring-black ring-opacity-5">
+                       <button 
+                           v-for="theme in themes" 
+                           :key="theme.id"
+                           @click="setTheme(theme.id); isThemeMenuOpen = false"
+                           class="w-full text-left px-4 py-2 text-sm hover:bg-gray-100 flex items-center justify-between"
+                           :class="currentTheme === theme.id ? 'text-orange-600 font-bold bg-orange-50' : 'text-gray-700'"
+                       >
+                           {{ theme.name }}
+                           <svg v-if="currentTheme === theme.id" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+                       </button>
+                   </div>
+                   <!-- Backdrop to close -->
+                    <div v-if="isThemeMenuOpen" @click="isThemeMenuOpen = false" class="fixed inset-0 z-40"></div>
+               </div>
+
               <div class="h-6 w-px bg-white/20 mx-2"></div>
               
               <div class="flex items-center">
@@ -67,6 +108,22 @@ const isMenuOpen = ref(false);
           <router-link v-if="isAdmin" to="/admin" class="text-white hover:bg-white/10 px-4 py-3 rounded-md font-medium flex items-center gap-2" active-class="bg-white/20" @click="isMenuOpen = false">
               Dashboard
           </router-link>
+
+           <!-- Theme Mobile -->
+          <div class="px-4 py-2 border-t border-white/10 mt-2">
+              <span class="text-xs uppercase text-white/50 font-bold tracking-wider mb-2 block">Theme</span>
+              <div class="grid grid-cols-3 gap-2">
+                  <button 
+                       v-for="theme in themes" 
+                       :key="theme.id"
+                       @click="setTheme(theme.id); isMenuOpen = false"
+                       class="text-center px-2 py-1.5 rounded text-xs font-bold border border-white/20"
+                       :class="currentTheme === theme.id ? 'bg-white text-orange-600' : 'text-white hover:bg-white/10'"
+                  >
+                      {{ theme.name }}
+                  </button>
+              </div>
+          </div>
           
           <div class="h-px bg-white/20 mx-2 my-2"></div>
           

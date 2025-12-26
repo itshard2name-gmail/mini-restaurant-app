@@ -123,7 +123,7 @@ const addToCartHandler = (menu) => {
                         >
                      </AspectRatio>
                      <div class="absolute top-2 right-2">
-                         <Badge variant="secondary" class="bg-white/90 backdrop-blur text-foreground font-bold shadow-sm">
+                         <Badge variant="secondary" class="bg-primary text-primary-foreground font-bold shadow-sm border-0">
                              ${{ menu.price }}
                          </Badge>
                      </div>

@@ -608,3 +608,20 @@ stateDiagram-v2
 *   **Trigger**: Called immediately after successful login in `Login.vue`.
 *   **Query**: `UPDATE Order o SET o.userId = :currentUserId WHERE o.guestToken = :guestToken`
 *   **Constraint**: The query must **NOT** check for `userId IS NULL`. It must overwrite the existing `userId` (even if it was `Table-5`) to effectively "transfer" ownership to the real user.
+
+## 11. Troubleshooting & Common Pitfalls
+
+### 11.1 Shared UI & Notifications (Sonner)
+
+#### Issue: `Cannot read properties of null (reading 'top')`
+*   **Context**: This runtime crash occurs when using the `vue-sonner` library for Toast notifications.
+*   **Cause**: The library's internal positioning logic relies on specific DOM elements having computed styles. If the CSS file (`vue-sonner/lib/index.css` or similar) is NOT imported, the elements render with zero dimensions or invalid state, causing the JavaScript positioning engine to fail when accessing the `top` property.
+*   **Solution**: 
+    1.  **Do NOT** use `vue-sonner` directly in sub-apps.
+    2.  **ALWAYS** use the standardized `<Toaster />` component from `@mini-restaurant/ui` (or `frontend/shared-ui`).
+    3.  The shared component encapsulates the critical import: `import 'vue-sonner/lib/index.css'`.
+
+### 11.2 Theme Variable Conflicts
+*   **Issue**: White flashes or illegible text in Dark Mode.
+*   **Cause**: Hardcoded Tailwind classes like `bg-white` or `text-gray-900`.
+*   **Fix**: Use semantic variables defined in `themes.js` (e.g., `bg-card`, `text-foreground`).

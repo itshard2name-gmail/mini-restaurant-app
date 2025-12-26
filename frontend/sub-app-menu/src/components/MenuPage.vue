@@ -1,19 +1,33 @@
 <script setup>
-import { ref } from 'vue'
+import { ref, onMounted, computed } from 'vue'
 import { onBeforeRouteLeave } from 'vue-router';
 import MenuList from './MenuList.vue'
 import Cart from './Cart.vue'
 import DiningModeDialog from './DiningModeDialog.vue';
 import DiningStatusBar from './DiningStatusBar.vue';
-import { Button, Sheet, SheetContent, SheetTrigger, Toast } from '@mini-restaurant/ui'
+import { Button, Sheet, SheetContent, SheetTrigger, Toaster, toast } from '@mini-restaurant/ui'
 import { useCartStore } from '../stores/cart'
 import { storeToRefs } from 'pinia'
+import { useCustomerTheme } from '../composables/useCustomerTheme';
 
 const cartStore = useCartStore();
 const { totalQuantity } = storeToRefs(cartStore);
 
-const showToast = ref(false);
-const toastMessage = ref('');
+// Theme Integration for Sonner
+const { currentTheme } = useCustomerTheme();
+
+const sonnerTheme = computed(() => {
+    // Map our app themes to Sonner's supported themes ('light', 'dark', 'system')
+    return currentTheme.value === 'bar-night' ? 'dark' : 'light';
+});
+
+
+// Initialize Theme
+// Moved to Host App CustomerLayout
+onMounted(() => {
+    // initTheme(); // Handled by Host App Layout
+});
+
 const isSheetOpen = ref(false);
 
 const diningInfo = ref(null);
@@ -72,11 +86,7 @@ const handleChangeMode = () => {
 };
 
 const handleAddToCart = (itemName) => {
-    toastMessage.value = `Added "${itemName}" to cart`;
-    showToast.value = true;
-    setTimeout(() => {
-        showToast.value = false;
-    }, 3000);
+    toast.success(`Added "${itemName}" to cart`);
 };
 
 // Zombie Fix: Force unmount
@@ -94,10 +104,11 @@ onBeforeRouteLeave((to, from, next) => {
 </script>
 
 <template>
-  <div v-if="isActive" id="sub-app-menu" class="min-h-screen bg-gray-50/50 font-sans">
-    <Toast :show="showToast" title="Success" :message="toastMessage" type="success" @close="showToast = false" />
+  <div v-if="isActive" id="sub-app-menu" class="min-h-screen font-sans">
+    <Toaster :theme="sonnerTheme" />
     <DiningModeDialog />
     
+
 
     <DiningStatusBar :diningInfo="diningInfo" @change-mode="handleChangeMode" />
 
