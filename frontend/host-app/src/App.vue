@@ -1,61 +1,110 @@
 <script setup>
 import ErrorBoundary from './components/ErrorBoundary.vue';
-import { ref, watch, onMounted } from 'vue';
+import { ref, watch, onMounted, computed } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 
 const router = useRouter();
 const route = useRoute();
+
+// Use useStorage for reactive local storage
+// Standard ref, no useStorage to avoid sync issues
+const token = ref(localStorage.getItem('token')); 
+
 const isAdmin = ref(false);
-const isMenuOpen = ref(false);
-
-const handleLogout = () => {
-  const wasAdmin = isAdmin.value;
-  localStorage.clear(); // Clear token AND cart state
-  
-  if (wasAdmin) {
-    router.push('/staff/login');
-  } else {
-    router.push('/login');
-  }
-};
-
 const diningInfo = ref(null);
+const debugMsg = ref('-');
 
 const checkRole = () => {
-  const token = localStorage.getItem('token');
-  if (!token) {
+  // Always read fresh from localStorage
+  const rawToken = localStorage.getItem('token');
+  console.log('App: checkRole called. Token in Storage:', rawToken);
+  
+  token.value = rawToken; // Update reactive state
+  
+  if (!rawToken) {
     isAdmin.value = false;
     diningInfo.value = null;
+    debugMsg.value = 'No Token';
     return;
   }
+  
   try {
-    const payload = JSON.parse(atob(token.split('.')[1]));
+    const payload = JSON.parse(atob(rawToken.split('.')[1]));
+    console.log('App: Token Payload:', payload);
+    
     isAdmin.value = payload.roles && payload.roles.includes('ROLE_ADMIN');
     
     // Parse Dining Info for Guests
     if (!isAdmin.value) {
+        let mode = payload.diningMode;
+        let table = payload.tableNumber;
+        
+        let source = 'Token';
+        
+        if (!mode) {
+           try {
+               const localInfo = JSON.parse(localStorage.getItem('diningInfo') || '{}');
+               console.log('App: Local Dining Info:', localInfo);
+               if (localInfo.mode) {
+                   mode = localInfo.mode;
+                   table = localInfo.table;
+                   source = 'LocalStorage';
+               }
+           } catch(e) { console.error('Error reading diningInfo', e); }
+        }
+
         diningInfo.value = {
-            mode: payload.diningMode, // 'DINE_IN' or 'TAKEOUT'
-            table: payload.tableNumber
+            mode: mode || 'UNKNOWN', 
+            table: table
         };
+        debugMsg.value = `Src:${source} Mode:${diningInfo.value.mode}`;
     } else {
         diningInfo.value = null;
+        debugMsg.value = 'Admin';
     }
   } catch (e) {
+    console.error('Error parsing token:', e);
     isAdmin.value = false;
     diningInfo.value = null;
+    debugMsg.value = 'ParseError';
   }
 };
-const token = ref(localStorage.getItem('token'));
 
-watch(() => route.path, () => {
-  token.value = localStorage.getItem('token');
-  checkRole();
-});
-
+// Listen for custom auth-change event from Login.vue
 onMounted(() => {
   checkRole();
+  window.addEventListener('auth-change', checkRole);
 });
+
+// Watch route as backup
+watch(() => route.path, () => {
+    checkRole();
+});
+
+const isMenuOpen = ref(false);
+
+const handleLogout = () => {
+  const wasAdmin = isAdmin.value;
+  
+  // Use reactive token to trigger UI updates immediately
+  token.value = null; 
+  // Just in case, clear cart too
+  localStorage.removeItem('cart');
+  localStorage.removeItem('diningInfo');
+  localStorage.removeItem('token'); // Ensure it's gone from storage
+  localStorage.removeItem('roles');
+  
+  window.dispatchEvent(new Event('auth-change'));
+  
+  if (wasAdmin) {
+    router.push('/staff/login');
+  } else {
+    // For Guests, go back to Menu page to see the Welcome Dialog again
+    router.push('/menu');
+    // Force reload to reset all states cleanly if needed, though router.push usually enough
+    // setTimeout(() => window.location.reload(), 50); 
+  }
+};
 </script>
 
 <template>
@@ -68,6 +117,10 @@ onMounted(() => {
              <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
           </div>
           <div class="font-extrabold text-2xl text-white tracking-tight">Restaurant App</div>
+          <!-- Debug Info (Temporary) -->
+          <div class="text-xs text-yellow-200 font-mono ml-4 bg-black/20 p-1 rounded">
+            DB: {{ debugMsg }}
+          </div>
         </div>
         
         <!-- Desktop Menu -->
@@ -93,17 +146,8 @@ onMounted(() => {
               <div class="h-6 w-px bg-white/20 mx-2"></div>
               
               <!-- Guest Status & Switch Mode -->
-              <div v-if="!isAdmin && diningInfo" class="flex items-center gap-3">
-                  <span class="text-white/90 text-sm bg-white/10 px-3 py-1 rounded-full">
-                      {{ diningInfo.mode === 'DINE_IN' ? `Dine-in ${diningInfo.table ? '#' + diningInfo.table : ''}` : 'Takeout' }}
-                  </span>
-                  <button @click="handleLogout" class="bg-white text-orange-600 hover:bg-orange-50 px-3 py-1 rounded-md text-sm font-bold transition-colors shadow-sm">
-                    Switch Mode
-                  </button>
-              </div>
-
               <!-- Admin Logout / Guest Sign In -->
-              <div v-else class="flex items-center">
+              <div class="flex items-center">
                   <router-link v-if="!token" to="/login" class="text-white/80 hover:text-white text-sm font-medium hover:underline">
                     Sign In
                   </router-link>
@@ -137,16 +181,7 @@ onMounted(() => {
           <div class="h-px bg-white/20 mx-2 my-2"></div>
           
           <!-- Mobile Guest Status -->
-          <div v-if="!isAdmin && diningInfo" class="px-4 py-2">
-              <span class="text-white/90 text-sm bg-white/10 px-3 py-1 rounded-full block w-fit mb-2">
-                  {{ diningInfo.mode === 'DINE_IN' ? `Dine-in ${diningInfo.table ? '#' + diningInfo.table : ''}` : 'Takeout' }}
-              </span>
-              <button @click="() => { isMenuOpen = false; handleLogout(); }" class="text-center w-full bg-white text-orange-600 hover:bg-orange-50 px-4 py-3 rounded-md font-bold transition-colors">
-                 Switch Mode
-              </button>
-          </div>
-
-          <div v-else>
+          <div>
               <router-link v-if="!token" to="/login" class="text-left text-white/90 hover:bg-white/10 px-4 py-3 rounded-md font-medium block" @click="isMenuOpen = false">
                  Sign In
               </router-link>

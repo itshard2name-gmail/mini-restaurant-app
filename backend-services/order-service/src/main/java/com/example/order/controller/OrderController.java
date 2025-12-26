@@ -106,4 +106,12 @@ public class OrderController {
     public ResponseEntity<Order> cancelOrder(@PathVariable Long id, @RequestHeader("X-User-Id") String userId) {
         return ResponseEntity.ok(orderService.cancelOrder(id, userId));
     }
+
+    @PostMapping("/merge")
+    public ResponseEntity<java.util.Map<String, Object>> mergeGuestOrders(
+            @RequestHeader("X-User-Id") String userId,
+            @RequestParam String guestToken) {
+        int count = orderService.mergeGuestOrders(userId, guestToken);
+        return ResponseEntity.ok(java.util.Map.of("mergedCount", count));
+    }
 }

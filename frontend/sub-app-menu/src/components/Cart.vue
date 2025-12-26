@@ -16,28 +16,55 @@ const cartStore = useCartStore();
     const errorMessage = ref('');
     
     const submitOrder = async () => {
+        console.log("DEBUG: Submit Order Clicked");
+        console.log("DEBUG: Order Type:", orderType.value);
+        console.log("DEBUG: Table Number:", tableNumber.value);
+        
         loading.value = true;
         successMessage.value = '';
         errorMessage.value = '';
     
         const token = localStorage.getItem('token');
+        console.log("DEBUG: Token exists?", !!token);
         
         // Validation: Dining Mode
         if (!orderType.value) {
+            console.log("DEBUG: No Order Type");
             errorMessage.value = "Please select Dining Mode (Refresh page if dialog missing)";
             loading.value = false;
             return;
         }
 
-        if (!token) {
-            // Guests strictly allowed for DINE_IN only
+        // Check Token Type (Real User vs Table User)
+        let isTableUser = false;
+        if (token) {
+            try {
+                const payload = JSON.parse(atob(token.split('.')[1]));
+                const sub = payload.sub || '';
+                console.log("DEBUG: Token Sub:", sub);
+                isTableUser = sub.startsWith('Table-');
+                console.log("DEBUG: Is Table User?", isTableUser);
+            } catch(e) {
+                console.error("DEBUG: Token Parse Error", e);
+            }
+        }
+
+        if (!token || (orderType.value === 'TAKEOUT' && isTableUser)) {
+            console.log("DEBUG: Entering Redirect Logic...");
+            // Rule: Takeout requires a Real User (Phone Number) for "Total Account" tracking.
+            // If No Token OR If currently logged in as a "Table User" (Anonymous Dine-In),
+            // we must force a real login.
+            
             if (orderType.value !== 'DINE_IN') {
+                 console.log("DEBUG: Redirecting to Login for Takeout...");
                  loading.value = false;
-                 router.push('/login?redirect=/menu');
-                 // For Takeout without login, we force login.
+                 // Use window.location.href to navigate to Host App route
+                 window.location.href = '/login?redirect=/menu&mode=TAKEOUT';
                  return;
             }
-            // For DINE_IN, we proceed as Guest.
+            console.log("DEBUG: Proceeding as Guest for DINE_IN");
+            // For DINE_IN without token (Guest), we proceed. 
+            // (Note: Table User has token, so they skip this block for DINE_IN, which is correct).
         }
 
         let userId = 'admin';
@@ -71,15 +98,18 @@ const cartStore = useCartStore();
 
             // --- MERGE LOGIC START ---
             let targetOrderId = null;
-            let guestToken = null;
+            
+            // SHADOW GUEST TOKEN: Always retrieve or persist
+            let guestToken = localStorage.getItem('guest_order_token');
+            // If we have a token but no guestToken yet, we should probably generate one or let backend do it.
+            // But to ensure session continuity, we rely on backend returning it if we don't have one.
+            // If we DO have one, we MUST send it.
 
             // 1. Guest Merge Check
             if (!token && orderType.value === 'DINE_IN') {
                 const storedId = localStorage.getItem('guest_order_id');
-                const storedToken = localStorage.getItem('guest_order_token');
-                if (storedId && storedToken) {
+                if (storedId && guestToken) {
                     targetOrderId = storedId;
-                    guestToken = storedToken;
                 }
             }
             // 2. User Merge Check (Takeout or Dine-In)
@@ -87,12 +117,16 @@ const cartStore = useCartStore();
                 try {
                     const activeRes = await axios.get('/api/orders/my/active', { headers });
                     if (activeRes.data && activeRes.data.length > 0) {
-                        // Find latest order compatible with merge (PENDING/PREPARING)
-                        // Note: Backend might return verified list, but good to be safe.
-                        // We pick the most recent one.
                         const activeOrder = activeRes.data[0];
-                        // Optional: Check if OrderType matches? For now assume User wants to add to *current* active order.
-                        targetOrderId = activeOrder.id;
+                        if (activeOrder.orderType === orderType.value) {
+                             if (orderType.value === 'DINE_IN' && activeOrder.tableNumber !== tableNumber.value) {
+                                 console.log("Skipping merge: Table number mismatch");
+                             } else {
+                                 targetOrderId = activeOrder.id;
+                             }
+                        } else {
+                            console.log(`Skipping merge: Order Type mismatch`);
+                        }
                     }
                 } catch (checkErr) {
                     console.warn("Failed to check active orders for merge:", checkErr);
@@ -103,25 +137,29 @@ const cartStore = useCartStore();
             if (targetOrderId) {
                 try {
                     console.log("Attempting to merge into Order ID:", targetOrderId);
+                    // For Add Items, we pass token/guestToken via query/headers if needed, 
+                    // but usually userId/guestToken on the Order itself is the check.
+                    // Shadow Token: We might want to ensure the order has the token, but addItems doesn't update Order level fields usually.
                     const url = `/api/orders/${targetOrderId}/items` + (guestToken ? `?token=${guestToken}` : '');
                     response = await axios.post(url, orderItems, { headers });
                 } catch (mergeErr) {
-                    console.warn("Merge failed (Order might be verified/paid), falling back to new order:", mergeErr);
-                    targetOrderId = null; // Reset to force new order
+                    console.warn("Merge failed, falling back to new order:", mergeErr);
+                    targetOrderId = null;
                 }
             }
 
             if (!targetOrderId) {
-                // Create New Order
+                // Create New Order with Shadow Token
                 response = await axios.post('/api/orders', { 
                     items: orderItems,
                     orderType: orderType.value,
-                    tableNumber: tableNumber.value
+                    tableNumber: tableNumber.value,
+                    guestToken: guestToken // <--- Send Shadow Token
                 }, { headers });
             }
             // --- MERGE LOGIC END ---
 
-            // Handle Guest Token (Update if new or changed)
+            // Handle Guest Token (Update if returned)
             if (response.data.guestToken) {
                 localStorage.setItem('guest_order_id', response.data.id);
                 localStorage.setItem('guest_order_token', response.data.guestToken);
@@ -250,7 +288,7 @@ const cartStore = useCartStore();
                 @click="submitOrder"
             >
                 <span v-if="loading" class="mr-2 animate-spin">⟳</span>
-                {{ loading ? 'Processing...' : 'Checkout' }}
+                {{ loading ? 'Processing...' : 'Checkout Now' }}
             </Button>
         </CardFooter>
     </Card>

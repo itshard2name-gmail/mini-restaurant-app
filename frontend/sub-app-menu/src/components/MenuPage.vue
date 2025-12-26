@@ -4,6 +4,7 @@ import { onBeforeRouteLeave } from 'vue-router';
 import MenuList from './MenuList.vue'
 import Cart from './Cart.vue'
 import DiningModeDialog from './DiningModeDialog.vue';
+import DiningStatusBar from './DiningStatusBar.vue';
 import { Button, Sheet, SheetContent, SheetTrigger, Toast } from '@mini-restaurant/ui'
 import { useCartStore } from '../stores/cart'
 import { storeToRefs } from 'pinia'
@@ -14,6 +15,61 @@ const { totalQuantity } = storeToRefs(cartStore);
 const showToast = ref(false);
 const toastMessage = ref('');
 const isSheetOpen = ref(false);
+
+const diningInfo = ref(null);
+
+const loadDiningInfo = () => {
+    try {
+        const info = JSON.parse(localStorage.getItem('diningInfo') || '{}');
+        if (info.mode) {
+           diningInfo.value = info;
+        } else if (cartStore.orderType) {
+           // Fallback for Anonymous Guest who just selected a mode
+           diningInfo.value = {
+               mode: cartStore.orderType,
+               table: cartStore.tableNumber
+           };
+        }
+    } catch(e) {}
+};
+
+// Watch for store changes (Anonymous Mode selection)
+cartStore.$subscribe((mutation, state) => {
+    if (state.orderType) {
+        diningInfo.value = {
+            mode: state.orderType,
+            table: state.tableNumber
+        };
+    } else {
+        // If cleared
+        loadDiningInfo();
+    }
+});
+
+// Also listen for auth-change to update this bar if triggered externally
+window.addEventListener('auth-change', loadDiningInfo);
+
+// Initial Load
+loadDiningInfo();
+
+const handleChangeMode = () => {
+    // 1. Clear Dining Info context (But keep Token/User Session!)
+    localStorage.removeItem('diningInfo');
+    // Note: We deliberately do NOT remove 'token' here, to support "Total Account" view.
+    // If the user is logged in, they remain logged in, just changing their context.
+    
+    // 2. Notify Host App (Navbar update)
+    window.dispatchEvent(new Event('auth-change'));
+    
+    // 3. Trigger Dialog Re-appearance
+    // We do NOT clear cart items (as requested for merging)
+    // We only reset the Mode so the Dialog thinks "User hasn't chosen yet"
+    cartStore.orderType = null;
+    cartStore.tableNumber = null;
+    
+    // 4. Update local state
+    diningInfo.value = null;
+};
 
 const handleAddToCart = (itemName) => {
     toastMessage.value = `Added "${itemName}" to cart`;
@@ -41,6 +97,10 @@ onBeforeRouteLeave((to, from, next) => {
   <div v-if="isActive" id="sub-app-menu" class="min-h-screen bg-gray-50/50 font-sans">
     <Toast :show="showToast" title="Success" :message="toastMessage" type="success" @close="showToast = false" />
     <DiningModeDialog />
+    
+
+    <DiningStatusBar :diningInfo="diningInfo" @change-mode="handleChangeMode" />
+
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div class="flex flex-col lg:flex-row gap-8 relative">
              <!-- Menu Section (70%) -->
@@ -60,7 +120,7 @@ onBeforeRouteLeave((to, from, next) => {
 
              <!-- Cart Section (30% - Sticky on Desktop) -->
              <aside class="hidden lg:block w-full lg:w-[30%]">
-                 <div class="sticky top-24 h-[calc(100vh-8rem)]">
+                 <div class="sticky top-24" :class="diningInfo ? 'h-[calc(100vh-11.5rem)]' : 'h-[calc(100vh-8rem)]'">
                      <Cart />
                  </div>
              </aside>

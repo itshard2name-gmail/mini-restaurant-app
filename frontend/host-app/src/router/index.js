@@ -74,6 +74,11 @@ router.beforeEach((to, from, next) => {
             }
         }
     } else if (to.meta.guest && token) {
+        // Exception: Allow access if switching mode to Takeout (Account Upgrade)
+        if (to.query.mode === 'TAKEOUT') {
+            return next();
+        }
+
         // Redirect logic if already logged in (e.g. trying to access login page)
         if (userRoles.includes('ROLE_ADMIN')) return next('/admin');
         return next('/menu');

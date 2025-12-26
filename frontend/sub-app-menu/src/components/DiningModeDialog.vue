@@ -11,14 +11,63 @@ const step = ref(1); // 1: Mode Select, 2: Table Select (if Dine-in)
 const availableTables = ref([]); // Will fetch from Settings
 const loadingTables = ref(false);
 
-// Mode Selection
+// Login Logic
+const phoneNumber = ref('');
+const loadingLogin = ref(false);
+
+const performRealLogin = async () => {
+    if (!phoneNumber.value) return;
+    loadingLogin.value = true;
+    try {
+        // Call Real Backend API
+        const res = await axios.post('/api/auth/quick-login', {
+            phone: phoneNumber.value
+        });
+        
+        if (res.data && res.data.token) {
+            const token = res.data.token;
+            const mode = cartStore.orderType;
+            const table = cartStore.tableNumber;
+            
+            // Save Valid Token
+            localStorage.setItem('token', token);
+            // Save Frontend Metadata (Since backend token might not have diningMode yet, or we use separate storage)
+            localStorage.setItem('diningInfo', JSON.stringify({ mode, table }));
+            
+            // Dispatch Event
+            window.dispatchEvent(new Event('auth-change'));
+            
+            isOpen.value = false;
+        }
+    } catch (e) {
+        console.error("Login failed", e);
+        alert("Login failed. Please try again.");
+    } finally {
+        loadingLogin.value = false;
+    }
+};
+
 const selectMode = (mode) => {
+    cartStore.orderType = mode;
     if (mode === 'TAKEOUT') {
-        cartStore.orderType = 'TAKEOUT';
         cartStore.tableNumber = null;
+        
+        // CHECK IF LOGGED IN
+        if (localStorage.getItem('token')) {
+             // Just update context
+             const info = { mode: 'TAKEOUT', table: null };
+             localStorage.setItem('diningInfo', JSON.stringify(info));
+             // Dispatch event to update Status Bars
+             window.dispatchEvent(new Event('auth-change'));
+             isOpen.value = false;
+             return;
+        }
+
+        // Deferred Login: Close dialog immediately. Login happens at Checkout.
+        // PERSISTENCE: Save mode to localStorage so Host App (Login.vue) can see it
+        localStorage.setItem('diningInfo', JSON.stringify({ mode: 'TAKEOUT', table: null }));
         isOpen.value = false;
     } else {
-        cartStore.orderType = 'DINE_IN';
         step.value = 2; // Go to Table Select
         fetchTables();
     }
@@ -27,27 +76,18 @@ const selectMode = (mode) => {
 const fetchTables = async () => {
     loadingTables.value = true;
     try {
-        // Fetch Settings from Backend to get TABLE_LIST
-        // Note: Public endpoint or requires Auth? 
-        // OrderService settings endpoint is protected by ADMIN role.
-        // We might need a public endpoint for this configuration or hardcode for now if auth is issue.
-        // Wait, User is generic guest, might have generated token.
-        // Let's try fetching, if 403, we fall back to default list.
-        
         const token = localStorage.getItem('token');
         const headers = token ? { Authorization: `Bearer ${token}` } : {};
         
         // Correct Endpoint: /api/orders/settings (Proxied to Order Service)
         const res = await axios.get('/api/orders/settings', { headers });
-        const settings = res.data; // Array of {settingKey, settingValue}
+        const settings = res.data; 
         
         const tableSetting = settings.find(s => s.settingKey === 'TABLE_LIST');
         
         if (tableSetting && tableSetting.settingValue) {
-            // Parse comma-separated string into array
             availableTables.value = tableSetting.settingValue.split(',').map(t => t.trim());
         } else {
-             // Fallback if key missing
              availableTables.value = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10'];
         }
 
@@ -61,7 +101,26 @@ const fetchTables = async () => {
 
 const selectTable = (table) => {
     cartStore.tableNumber = table;
-    isOpen.value = false;
+    
+    // CHECK IF LOGGED IN
+    if (localStorage.getItem('token')) {
+         // Just update context
+         const info = { mode: 'DINE_IN', table: table };
+         localStorage.setItem('diningInfo', JSON.stringify(info));
+         // Dispatch event to update Status Bars
+         window.dispatchEvent(new Event('auth-change'));
+         isOpen.value = false;
+         return;
+    }
+
+    // UX Improvement: For Dine-in, auto-login with Table Number as ID
+    // This avoids asking for phone number, making flow smoother
+    phoneNumber.value = `Table-${table}`; 
+    performRealLogin();
+};
+
+const confirmLogin = () => {
+    performRealLogin();
 };
 
 // Check if we need to show dialog
@@ -122,7 +181,7 @@ onBeforeUnmount(() => {
                     </div>
 
                     <!-- STEP 2: TABLE SELECT -->
-                    <div v-else class="space-y-4">
+                    <div v-else-if="step === 2" class="space-y-4">
                          <div class="grid grid-cols-4 gap-2 max-h-60 overflow-y-auto p-1">
                             <button 
                                 v-for="tbl in availableTables"
@@ -137,6 +196,8 @@ onBeforeUnmount(() => {
                             Back
                          </Button>
                     </div>
+
+
 
                 </CardContent>
             </Card>

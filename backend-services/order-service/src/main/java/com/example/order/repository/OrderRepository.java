@@ -61,4 +61,8 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
                         @Param("date") String date,
                         @Param("query") String query,
                         org.springframework.data.domain.Pageable pageable);
+
+        @org.springframework.data.jpa.repository.Modifying
+        @Query("UPDATE Order o SET o.userId = :userId WHERE o.guestToken = :guestToken")
+        int mergeGuestOrders(@Param("userId") String userId, @Param("guestToken") String guestToken);
 }

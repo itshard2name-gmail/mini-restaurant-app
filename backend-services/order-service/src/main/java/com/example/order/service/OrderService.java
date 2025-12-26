@@ -59,6 +59,11 @@ public class OrderService {
     public Order createOrder(String userId, CreateOrderRequest request) {
         Order order = new Order();
 
+        // Always set Guest Token if provided (Shadow Token Strategy)
+        if (request.getGuestToken() != null && !request.getGuestToken().isBlank()) {
+            order.setGuestToken(request.getGuestToken());
+        }
+
         // Handle Guest Order vs User Order
         if (userId != null && !userId.isBlank()) {
             order.setUserId(userId);
@@ -72,9 +77,12 @@ public class OrderService {
             if (request.getTableNumber() == null || request.getTableNumber().trim().isEmpty()) {
                 throw new IllegalArgumentException("Guest orders must have a Table Number.");
             }
-            // Generate Guest Token
-            order.setGuestToken(java.util.UUID.randomUUID().toString());
             order.setUserId(null);
+        }
+
+        // Ensure Shadow Token always exists for tracking across sessions
+        if (order.getGuestToken() == null) {
+            order.setGuestToken(java.util.UUID.randomUUID().toString());
         }
 
         order.setStatus("PENDING");
@@ -339,5 +347,14 @@ public class OrderService {
         String finalDate = (date != null && !date.trim().isEmpty()) ? date.trim() : null;
 
         return orderRepository.findOrders(statuses, finalDate, finalQuery, pageable);
+    }
+
+    @Transactional
+    public int mergeGuestOrders(String userId, String guestToken) {
+        if (userId == null || userId.isBlank() || guestToken == null || guestToken.isBlank()) {
+            return 0;
+        }
+        // Shadow Token Merge: Any order with this guestToken belongs to the user now.
+        return orderRepository.mergeGuestOrders(userId, guestToken);
     }
 }

@@ -9,4 +9,5 @@ public class CreateOrderRequest {
     private String notes;
     private String orderType; // DINE_IN, TAKEOUT
     private String tableNumber;
+    private String guestToken; // Shadow Session ID for all users
 }

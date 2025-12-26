@@ -11,12 +11,64 @@ const router = useRouter();
 const route = useRoute();
 
 const phone = ref('');
+const diningMode = ref('DINE_IN'); // 'DINE_IN' or 'TAKEOUT'
+const tableNumber = ref('');
 const errorMsg = ref('');
 const isLoading = ref(false);
 
-const handleResponse = (res) => {
+// Fixed Mode logic for Checkout Redirect
+const isFixedMode = ref(false);
+
+import { onMounted } from 'vue';
+onMounted(() => {
+    if (route.query.mode && ['DINE_IN', 'TAKEOUT'].includes(route.query.mode)) {
+        diningMode.value = route.query.mode;
+        isFixedMode.value = true;
+    } else {
+        // Fallback: Check LocalStorage if mode is already set (Context Awareness)
+        try {
+            const savedInfo = JSON.parse(localStorage.getItem('diningInfo') || '{}');
+            if (savedInfo.mode === 'TAKEOUT') {
+                diningMode.value = 'TAKEOUT';
+                // If user is already in Takeout context, we treat it as fixed mode to avoid confusion
+                isFixedMode.value = true;
+            }
+        } catch (e) {}
+    }
+});
+
+const handleResponse = async (res) => {
     if (res.token) {
         localStorage.setItem('token', res.token);
+        
+        // Store Dining Info in LocalStorage (Frontend Persistence)
+        if (diningMode.value) {
+            localStorage.setItem('diningInfo', JSON.stringify({
+                mode: diningMode.value,
+                table: tableNumber.value
+            }));
+        }
+        
+        // Notify App.vue to update state immediately
+        window.dispatchEvent(new Event('auth-change'));
+        
+        // --- Merge Guest Orders Logic ---
+        const guestToken = localStorage.getItem('guest_order_token');
+        if (guestToken) {
+            try {
+                console.log('Found Guest Token, merging orders...');
+                await request.post('/orders/merge', null, {
+                    params: { guestToken: guestToken }
+                });
+                // Remove guest tokens to prevent re-merge or confusion
+                localStorage.removeItem('guest_order_token');
+                localStorage.removeItem('guest_order_id');
+                console.log('Orders merged successfully');
+            } catch (err) {
+                console.warn('Failed to merge guest orders', err);
+            }
+        }
+        // --------------------------------
         
         // Store roles if available
         if (res.roles) {
@@ -44,12 +96,19 @@ const handleQuickLogin = async () => {
         return;
     }
     
+    if (diningMode.value === 'DINE_IN' && !tableNumber.value) {
+        errorMsg.value = "Please enter your table number";
+        return;
+    }
+    
     isLoading.value = true;
     errorMsg.value = '';
 
     try {
         const res = await request.post('/auth/quick-login', {
-            phone: phone.value
+            phone: phone.value,
+            diningMode: diningMode.value,
+            tableNumber: diningMode.value === 'DINE_IN' ? tableNumber.value : null
         });
         handleResponse(res);
     } catch (e) {
@@ -76,6 +135,34 @@ const handleQuickLogin = async () => {
          <CardContent class="grid gap-4">
              <!-- Customer Login Form -->
              <div class="space-y-4">
+                 <!-- Dining Mode Selection -->
+                 <div v-if="!isFixedMode" class="grid grid-cols-2 gap-2 mb-4">
+                    <button 
+                        @click="diningMode = 'DINE_IN'"
+                        class="p-2 rounded-md font-medium text-sm transition-colors border-2"
+                        :class="diningMode === 'DINE_IN' ? 'border-primary bg-primary/10 text-primary' : 'border-transparent bg-gray-100 text-gray-600 hover:bg-gray-200'"
+                    >
+                        Accomo (Dine-in)
+                    </button>
+                    <button 
+                        @click="diningMode = 'TAKEOUT'"
+                        class="p-2 rounded-md font-medium text-sm transition-colors border-2"
+                        :class="diningMode === 'TAKEOUT' ? 'border-primary bg-primary/10 text-primary' : 'border-transparent bg-gray-100 text-gray-600 hover:bg-gray-200'"
+                    >
+                        Takeout
+                    </button>
+                 </div>
+
+                 <div v-if="diningMode === 'DINE_IN'" class="grid gap-2">
+                     <Label htmlFor="tableNumber">Table Number</Label>
+                     <Input 
+                        id="tableNumber" 
+                        v-model="tableNumber" 
+                        type="number" 
+                        placeholder="e.g. 5" 
+                     />
+                 </div>
+
                  <div class="grid gap-2">
                      <Label htmlFor="phone">Mobile Number</Label>
                      <Input 
@@ -87,7 +174,7 @@ const handleQuickLogin = async () => {
                      />
                  </div>
                  <Button class="w-full bg-primary hover:bg-primary/90" @click="handleQuickLogin" :disabled="isLoading">
-                    {{ isLoading ? 'Processing...' : 'Track Order / Quick Login' }}
+                    {{ isLoading ? 'Processing...' : 'Start Ordering' }}
                  </Button>
              </div>
              

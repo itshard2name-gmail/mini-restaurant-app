@@ -11,6 +11,20 @@ service.interceptors.request.use(
         const token = localStorage.getItem('token');
         if (token) {
             config.headers['Authorization'] = 'Bearer ' + token;
+            try {
+                // Decode JWT to get User ID (Mock Gateway behavior for Local Dev)
+                // The backend requires X-User-Id which is normally injected by the Gateway
+                const base64Url = token.split('.')[1];
+                const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+                const payload = JSON.parse(window.atob(base64));
+
+                // Assuming 'sub' holds the user ID (phone number)
+                if (payload.sub) {
+                    config.headers['X-User-Id'] = payload.sub;
+                }
+            } catch (e) {
+                console.warn('Failed to parse token for X-User-Id injection', e);
+            }
         }
         return config;
     },

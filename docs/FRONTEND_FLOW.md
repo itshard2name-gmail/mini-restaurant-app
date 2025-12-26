@@ -49,17 +49,23 @@ stateDiagram-v2
     
     %% --- Dining Mode Flow (Micro-Interaction) ---
     MenuPage --> WelcomeDialog: On Load (if no Session)
-    WelcomeDialog --> MenuPage: Select Dine-In (Auto-Login)
-    WelcomeDialog --> MenuPage: Select Takeout (Phone Login)
+    WelcomeDialog --> MenuPage: Select Dine-In (Table Auto-Login)
+    WelcomeDialog --> MenuPage: Select Takeout (Anonymous Mode)
     
     MenuPage --> StatusBar: Shows Current Mode
-    StatusBar --> WelcomeDialog: "Change Mode" Click (Clears Session)
+    StatusBar --> WelcomeDialog: "Change Mode" Click
+    
+    %% --- Checkout Flow ---
+    state "Shopping Cart" as Cart
+    MenuPage --> Cart: Add Items
+    Cart --> Login: Checkout (If Guest Takeout)
+    Login --> Cart: Success (Auto-Merge) -> Checkout Success
     
     note right of StatusBar
        **Smart Merge**:
-       Cart Items Persist
-       even when switching
-       Auth Session.
+       Cart Items Persist.
+       Guest Orders linked
+       to Account on Login.
     end note
 
     %% --- Internal States: Admin Dashboard ---

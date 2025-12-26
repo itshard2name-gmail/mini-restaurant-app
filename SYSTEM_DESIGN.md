@@ -480,7 +480,7 @@ We use **Vite Plugin Federation** to compose the UI at runtime.
 ## 8. Deployment & Development
 
 ### 8.1 Docker Environment
--   **Start**: `docker-compose up --build -d`
+-   **Start**: `docker compose up --build -d`
 -   **Services**: `mysql`, `redis`, `rabbitmq`, `registry`, `gateway`, `auth`, `order`, `envoy`.
 -   **Data Persistence**: Named volume `mysql_data` persists DB state.
 

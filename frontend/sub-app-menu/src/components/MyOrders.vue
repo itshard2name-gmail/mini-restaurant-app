@@ -5,6 +5,38 @@ import { Client } from '@stomp/stompjs';
 import SockJS from 'sockjs-client';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter, Badge, Button, Separator } from '@mini-restaurant/ui';
 
+import DiningModeDialog from './DiningModeDialog.vue';
+import DiningStatusBar from './DiningStatusBar.vue';
+import { useCartStore } from '../stores/cart';
+
+const cartStore = useCartStore();
+const diningInfo = ref(null);
+
+const loadDiningInfo = () => {
+    try {
+        const info = JSON.parse(localStorage.getItem('diningInfo') || '{}');
+        if (info.mode) {
+           diningInfo.value = info;
+        } else if (cartStore.orderType) {
+           diningInfo.value = {
+               mode: cartStore.orderType,
+               table: cartStore.tableNumber
+           };
+        }
+    } catch(e) {}
+};
+
+const handleChangeMode = () => {
+    // Keep Token to preserve User Identity across modes
+    localStorage.removeItem('diningInfo');
+    window.dispatchEvent(new Event('auth-change'));
+    cartStore.orderType = null;
+    cartStore.tableNumber = null;
+    diningInfo.value = null;
+};
+
+// Also listen for auth-change to update this bar
+window.addEventListener('auth-change', loadDiningInfo);
 const activeOrders = ref([]);
 const historyOrders = ref([]);
 const currentTab = ref('active'); // 'active' | 'history'
@@ -316,6 +348,7 @@ const connectWebSocket = () => {
 
 onMounted(() => {
     checkGuestStatus();
+    loadDiningInfo(); // Load dining info on mount
     fetchActiveOrders();
     connectWebSocket();
 });
@@ -329,7 +362,11 @@ onUnmounted(() => {
 </script>
 
 <template>
-    <div id="sub-app-menu" class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8 relative">
+    <div id="sub-app-menu" class="bg-gray-50/50 min-h-screen">
+        <DiningModeDialog />
+        <DiningStatusBar :diningInfo="diningInfo" @change-mode="handleChangeMode" />
+        
+        <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8 relative">
         <div>
             <h2 class="text-3xl font-extrabold tracking-tight">My Orders</h2>
             <p class="text-muted-foreground mt-2">Track your past and current orders.</p>
@@ -482,4 +519,5 @@ onUnmounted(() => {
              </div>
         </div>
     </div>
+  </div>
 </template>
