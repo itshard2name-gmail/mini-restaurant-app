@@ -19,12 +19,15 @@ public class OrderService {
 
     private final MenuRepository menuRepository;
     private final OrderRepository orderRepository;
+    private final com.example.order.repository.CategoryRepository categoryRepository;
     private final org.springframework.amqp.rabbit.core.RabbitTemplate rabbitTemplate;
 
     public OrderService(MenuRepository menuRepository, OrderRepository orderRepository,
+            com.example.order.repository.CategoryRepository categoryRepository,
             org.springframework.amqp.rabbit.core.RabbitTemplate rabbitTemplate) {
         this.menuRepository = menuRepository;
         this.orderRepository = orderRepository;
+        this.categoryRepository = categoryRepository;
         this.rabbitTemplate = rabbitTemplate;
     }
 
@@ -290,6 +293,11 @@ public class OrderService {
 
     @Transactional
     public Menu createMenu(Menu menu) {
+        if (menu.getCategoryId() != null) {
+            com.example.order.entity.Category category = categoryRepository.findById(menu.getCategoryId())
+                    .orElseThrow(() -> new RuntimeException("Category not found: " + menu.getCategoryId()));
+            menu.setCategory(category);
+        }
         return menuRepository.save(menu);
     }
 
@@ -302,6 +310,12 @@ public class OrderService {
         menu.setPrice(menuDetails.getPrice());
         menu.setDescription(menuDetails.getDescription());
         menu.setImageUrl(menuDetails.getImageUrl());
+
+        if (menuDetails.getCategoryId() != null) {
+            com.example.order.entity.Category category = categoryRepository.findById(menuDetails.getCategoryId())
+                    .orElseThrow(() -> new RuntimeException("Category not found: " + menuDetails.getCategoryId()));
+            menu.setCategory(category);
+        }
 
         return menuRepository.save(menu);
     }

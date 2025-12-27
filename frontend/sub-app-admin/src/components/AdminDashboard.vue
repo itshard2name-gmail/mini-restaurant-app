@@ -54,7 +54,7 @@ const MenuManagement = defineAsyncComponent(() => import('./MenuManagement.vue')
 const AnalyticsBoard = defineAsyncComponent(() => import('./AnalyticsBoard.vue'));
 const SettingsBoard = defineAsyncComponent(() => import('./SettingsBoard.vue'));
 
-const currentTab = ref('analytics'); // Default to Analytics for demo
+const currentTab = ref('menu'); // Default to Menu for verification convenience
 
 const navigation = [
   { name: 'orders', label: 'Active Orders', component: OrderManagement },

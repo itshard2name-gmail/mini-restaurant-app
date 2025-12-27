@@ -16,5 +16,10 @@ public class Menu {
     private String description;
     private String imageUrl;
 
-    private String category;
+    @ManyToOne
+    @JoinColumn(name = "category_id")
+    private Category category;
+
+    @Transient
+    private Long categoryId; // Helper for API input
 }

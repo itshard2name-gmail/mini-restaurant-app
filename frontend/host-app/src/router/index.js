@@ -1,30 +1,24 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import Login from '../components/Login.vue'
 import StaffLogin from '../components/StaffLogin.vue'
-import { defineAsyncComponent } from 'vue'
-
 // Basic error boundary for remote components
-// Basic error boundary for remote components
-const MenuList = defineAsyncComponent(() =>
+const MenuList = () =>
     import('sub-app-menu/MenuPage').catch(err => {
         console.error("Failed to load MenuPage remote:", err);
         return { template: '<div class="text-red-500">Failed to load Menu module. Ensure sub-app is running.</div>' }
     })
-)
 
-const MyOrders = defineAsyncComponent(() =>
+const MyOrders = () =>
     import('sub-app-menu/MyOrders').catch(err => {
         console.error("Failed to load MyOrders remote:", err);
         return { template: '<div class="text-red-500">Failed to load Order module.</div>' }
     })
-)
 
-const AdminDashboard = defineAsyncComponent(() =>
+const AdminDashboard = () =>
     import('sub-app-admin/AdminDashboard').catch(err => {
         console.error("Failed to load AdminDashboard remote:", err);
         return { template: '<div class="text-red-500">Failed to load Admin module.</div>' }
     })
-)
 
 const routes = [
     { path: '/', redirect: '/menu' },

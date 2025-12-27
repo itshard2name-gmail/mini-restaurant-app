@@ -2,10 +2,11 @@
 export default {
 	darkMode: ["class"],
 	darkMode: ["class"],
-	important: '#admin-wrapper', // Scope all styles to this ID
+	// important: '#admin-wrapper', // Disabled: Breaks DialogPortal which teleports to body
 	content: [
 		"./index.html",
 		"./src/**/*.{vue,js,ts,jsx,tsx}",
+		"../shared-ui/src/**/*.{vue,js,ts,jsx,tsx}"
 	],
 	// Safelist dynamic classes (patterns are safer)
 	// Safelist removed - using shared UI

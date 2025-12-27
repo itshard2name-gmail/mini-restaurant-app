@@ -3,7 +3,8 @@
 @tailwind utilities;
 
 /* Scoped variables without @layer base to avoid build error */
-.admin-scope {
+/* Scoped variables without @layer base to avoid build error */
+:root {
   /* Scoped Admin Variables */
   --admin-background: 210 40% 96.1%;
   /* gray-100 */
@@ -28,7 +29,7 @@
   --admin-radius: 0.5rem;
 }
 
-.dark .admin-scope {
+.dark {
   /* Enterprise Dark Theme (Gray-950 Base) */
   --admin-background: 224 71% 4%;
   /* gray-950 #030712 */

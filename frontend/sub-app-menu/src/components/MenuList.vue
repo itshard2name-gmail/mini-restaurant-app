@@ -8,15 +8,17 @@ const cartStore = useCartStore();
 const { addToCart } = cartStore;
 
 const menus = ref([]);
+const categories = ref([]);
 const errorMessage = ref('');
 const searchQuery = ref('');
 
-const selectedCategory = ref('All');
+const selectedCategoryId = ref('All');
 
-const categories = computed(() => {
-    // Dynamically extra categories from loaded menus
-    const cats = new Set(menus.value.map(m => m.category || 'Main')); // Default to Main if null
-    return ['All', ...Array.from(cats)];
+// Computed Categories for UI (All + Fetched)
+const displayCategories = computed(() => {
+    // Sort categories by displayOrder
+    const sorted = [...categories.value].sort((a, b) => (a.displayOrder || 0) - (b.displayOrder || 0));
+    return [{ id: 'All', name: 'All' }, ...sorted];
 });
 
 const filteredMenus = computed(() => {
@@ -29,25 +31,30 @@ const filteredMenus = computed(() => {
             (menu.description && menu.description.toLowerCase().includes(lowerQuery));
 
         // Filter 2: Category
-        const matchesCategory = selectedCategory.value === 'All' || 
-            (menu.category || 'Main') === selectedCategory.value;
+        // Compare menu.category.id with selectedCategoryId
+        const matchesCategory = selectedCategoryId.value === 'All' || 
+            (menu.category?.id === selectedCategoryId.value);
 
         return matchesSearch && matchesCategory;
     });
 });
 
-const fetchMenus = async () => {
+const fetchData = async () => {
   try {
-    const response = await axios.get('/api/orders/menus');
-    menus.value = response.data;
+    const [menuRes, catRes] = await Promise.all([
+        axios.get('/api/orders/menus'),
+        axios.get('/api/orders/categories')
+    ]);
+    menus.value = menuRes.data;
+    categories.value = catRes.data;
   } catch (error) {
-    console.error('Error fetching menus:', error);
-    errorMessage.value = 'Failed to load menus.';
+    console.error('Error fetching data:', error);
+    errorMessage.value = 'Failed to load menu data.';
   }
 };
 
 onMounted(() => {
-  fetchMenus();
+  fetchData();
 });
 const emit = defineEmits(['added-to-cart']);
 
@@ -95,15 +102,15 @@ const addToCartHandler = (menu) => {
              <!-- Category Filter Pills -->
              <div class="flex flex-wrap gap-2">
                  <button 
-                    v-for="cat in categories" 
-                    :key="cat"
-                    @click="selectedCategory = cat"
+                    v-for="cat in displayCategories" 
+                    :key="cat.id"
+                    @click="selectedCategoryId = cat.id"
                     class="px-4 py-1.5 rounded-full text-sm font-medium transition-all"
-                    :class="selectedCategory === cat 
+                    :class="selectedCategoryId === cat.id 
                         ? 'bg-primary text-primary-foreground shadow-sm' 
                         : 'bg-muted text-muted-foreground hover:bg-muted/80'"
                  >
-                     {{ cat }}
+                     {{ cat.name }}
                  </button>
              </div>
         </div>

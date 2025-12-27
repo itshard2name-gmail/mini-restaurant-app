@@ -267,7 +267,7 @@ import axios from 'axios';
 import { Client } from '@stomp/stompjs';
 
 // Shadcn UI Components
-import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter, Button, Badge } from '@mini-restaurant/ui';
+import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter, Button, Badge, toast } from '@mini-restaurant/ui';
 
 const orders = ref([]);
 const loading = ref(true);
@@ -405,7 +405,7 @@ const updateStatus = async (orderId, newStatus) => {
     await fetchOrders();
   } catch (err) {
     console.error('Failed to update status:', err);
-    alert('Failed to update order status');
+    toast.error('Failed to update order status');
   }
 };
 

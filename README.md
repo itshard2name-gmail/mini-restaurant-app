@@ -97,7 +97,8 @@ cd frontend/sub-app-admin && npm run preview
 ```
 > **CRITICAL**: Sub-apps (Menu, Admin) **MUST** be run in `preview` mode (after `npm run build`). Running them in `dev` mode will fail to generate/serve `remoteEntry.js`, preventing the Host App from loading module federation remotes.
 
-Access the app at: **http://localhost:3000**
+Access the Customer app at: **http://localhost:3000**
+Access the Admin app at: **http://localhost:3000/admin**
 
 ## 4. User Manual (Getting Started)
 
