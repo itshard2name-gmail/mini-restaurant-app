@@ -1,0 +1,24 @@
+{
+    "base_urls": {
+        "admin_panel": "http://localhost:3000/admin",
+        "customer_app": "http://localhost:3000",
+        "backend_monitor": "http://localhost:9090",
+        "gateway": "http://localhost:8080"
+    },
+    "credentials": {
+        "admin": {
+            "username": "admin",
+            "password": "123456",
+            "role": "Administrator"
+        },
+        "customer": {
+            "username": "customer",
+            "password": "123456",
+            "role": "Customer"
+        }
+    },
+    "environment": {
+        "type": "local_dev",
+        "notes": "Ensure frontend services are running on port 3000 and backend on standard ports."
+    }
+}
