@@ -63,42 +63,56 @@ Welcome to the Mini Restaurant App! This platform demonstrates a robust, modern 
     - `sub-app-menu`: Menu & Cart Remote (Mounted at `/`)
     - `sub-app-admin`: Admin Dashboard Remote (Mounted at `/admin`)
 
-## 3. Quick Start
+## 3. Quick Start (Development)
+The project now uses `direnv` and `make` for streamlined environment management.
 
-### 3.1 Backend Infrastructure (Docker)
-Start the entire backend ecosystem including databases, message queues, and monitoring:
+### 3.1 Prerequisites
+1.  **Docker & Docker Compose**: Ensure Docker Desktop is running.
+2.  **Direnv**: `brew install direnv` (Mac) or other package managers.
+3.  **Setup**:
+    ```bash
+    cp .env.example .env
+    direnv allow
+    ```
+
+### 3.2 Running the Environment
+We support two modes: **Development** (Unified Docker) and **Staging** (Integration Test).
+
+#### Option A: Development Mode (Recommended)
+Everything runs in Docker. Frontends ingest local changes via Volume Mounts.
+
+1.  **Build Frontends** (Initial Setup):
+    ```bash
+    make build-frontends
+    ```
+
+2.  **Start Environment**:
+    ```bash
+    make dev
+    ```
+    *   **Host App**: http://localhost:10000
+    *   **Admin Dashboard**: http://localhost:10021
+    *   **Infrastructure**: MySQL (10030), Redis (10031)
+
+3.  **Development Workflow**:
+    *   Edit code in IDE.
+    *   Run `npm run build` in the respective frontend folder.
+    *   Refresh browser.
+
+#### Option B: Staging Mode (Integration Test)
+Fully Dockerized environment associated with Stage ports (11000+).
 
 ```bash
-docker compose up --build -d
+make stage
 ```
+*   **Host App**: http://localhost:11000
+*   **Admin Dashboard**: http://localhost:11021
 
-**Service Endpoints**:
-- **Application Entry (Envoy)**: http://localhost:8080
-- **Admin Monitoring Dashboard**: http://localhost:9090 (Login not required for local dev)
-- **Eureka Dashboard**: http://localhost:8761
-- **MySQL**: Port 3307 (`root`/`root`)
-
-> **Note**: On the first `docker compose up`, the `auth-service` automatically seeds the database with initial users (`admin`, `customer`) via `import.sql`.
-> **Persistence**: A Docker Named Volume (`mysql_data`) is configured to persist database changes across restarts.
-> ⚠️ **Warning**: Running `docker compose down -v` will **DELETE** this volume and ALL database data. Use `docker compose down` (without `-v`) to stop services while keeping data.
-
-### 3.2 Frontend (Development)
-The frontend uses **Vite Plugin Federation**. You need to run the host and all sub-apps simultaneously for full functionality.
-
+### 3.3 Stopping the System
 ```bash
-# Terminal 1: Host App
-cd frontend/host-app && npm run dev
-
-# Terminal 2: Menu Sub-app
-cd frontend/sub-app-menu && npm run preview
-
-# Terminal 3: Admin Sub-app
-cd frontend/sub-app-admin && npm run preview
+make down-dev   # Stop Development environment
+make down-stage # Stop Staging environment
 ```
-> **CRITICAL**: Sub-apps (Menu, Admin) **MUST** be run in `preview` mode (after `npm run build`). Running them in `dev` mode will fail to generate/serve `remoteEntry.js`, preventing the Host App from loading module federation remotes.
-
-Access the Customer app at: **http://localhost:3000**
-Access the Admin app at: **http://localhost:3000/admin**
 
 ## 4. User Manual (Getting Started)
 
@@ -139,14 +153,14 @@ The dashboard organizes orders using the following logic:
 - **History**: Finalized orders (`COMPLETED`, `CANCELLED`).
 
 ### 4.4 System Monitoring (DevOps)
--   **Dashboard**: Visit `http://localhost:9090` (Spring Boot Admin).
+-   **Dashboard**: Visit `http://localhost:10021` (Spring Boot Admin).
 -   **Check Health**: Verify that `AUTH-SERVICE`, `ORDER-SERVICE`, etc., are all **UP**.
 -   **View Metrics**: Click on `ORDER-SERVICE` -> **Insights** -> **Metrics** to see real-time graph data.
 
 ### 4.5 API Documentation (Developers)
 -   **Unified Access**: Gateway aggregates all microservice APIs into a single portal.
 -   **Interactive UI**: Use **Swagger UI** to explore endpoints and test requests directly.
--   **URL**: `http://localhost:8088/webjars/swagger-ui/index.html` (Select Service: Auth / Order)
+-   **URL**: `http://localhost:10010/webjars/swagger-ui/index.html` (Select Service: Auth / Order)
 
 ## 5. Key Technical Highlights
 

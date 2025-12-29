@@ -420,11 +420,15 @@ let refreshInterval;
 let stompClient = null;
 
 const connectWebSocket = () => {
+    // Dynamic WebSocket URL for Admin Portal
+    // Uses Nginx /ws/ proxy setup
+    const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    const wsUrl = `${wsProtocol}//${window.location.host}/ws`;
+
     stompClient = new Client({
-        // Gateway is mapped to Host 8088 in Docker Compose
-        brokerURL: 'ws://localhost:8088/ws', 
+        brokerURL: wsUrl, 
         onConnect: () => {
-            console.log('Connected to WebSocket via Gateway (8088)');
+            console.log('Connected to WebSocket via ' + wsUrl);
             stompClient.subscribe('/topic/orders', (message) => {
                 console.log('Received message:', message.body);
                 // Refresh current page on update

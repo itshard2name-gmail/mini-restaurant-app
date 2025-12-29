@@ -22,11 +22,11 @@ export default defineConfig({
     })
   ],
   server: {
-    port: 5003, // Run on a different port than host (5000) and other subs (5001, 5002)
+    port: process.env.PORT_FRONTEND_ADMIN || 5003, // Run on a different port than host (5000) and other subs (5001, 5002)
     cors: true
   },
   preview: {
-    port: 5003,
+    port: process.env.PORT_FRONTEND_ADMIN || 5003,
     cors: true,
     strictPort: true
   },
@@ -36,5 +36,5 @@ export default defineConfig({
     assetsDir: ''
   },
   // Ensure assets are loaded from the correct remote domain/port
-  base: 'http://localhost:5003/'
+  base: `http://localhost:${process.env.PORT_FRONTEND_ADMIN || 5003}/`
 })

@@ -16,8 +16,8 @@ export default defineConfig({
     federation({
       name: 'host-app',
       remotes: {
-        'sub-app-menu': 'http://localhost:5001/assets/remoteEntry.js',
-        'sub-app-admin': 'http://localhost:5003/remoteEntry.js',
+        'sub-app-menu': `http://localhost:${process.env.PORT_FRONTEND_MENU || 5001}/assets/remoteEntry.js`,
+        'sub-app-admin': `http://localhost:${process.env.PORT_FRONTEND_ADMIN || 5003}/remoteEntry.js`,
       },
       shared: ['vue', 'pinia', 'vue-router']
     })
@@ -26,16 +26,16 @@ export default defineConfig({
     target: 'esnext' // Required for federation
   },
   server: {
-    port: 3000,
+    port: process.env.PORT_FRONTEND_HOST || 3000,
     proxy: {
       '/api': {
-        target: 'http://localhost:8888',
+        target: `http://localhost:${process.env.PORT_ENVOY || 8888}`,
         changeOrigin: true
       }
     }
   },
   preview: {
-    port: 3000,
+    port: process.env.PORT_FRONTEND_HOST || 3000,
     strictPort: true
   }
 })

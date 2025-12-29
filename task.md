@@ -203,3 +203,22 @@
 
 - [x] **Phase 26: Frontend Workflow Standardization**
     - [x] **Workflow**: Create `.agent/workflows/manage_frontend.md` to enforce `preview` mode for sub-apps.
+
+- [x] **Phase 27: Developer Experience Improvements**
+    - [x] **Configuration**: Create `.envrc` for `direnv` auto-loading of environment variables.
+    - [x] **Configuration**: Centralize all Service & Frontend ports in `.envrc` (`docker-compose.yml` & `vite.config.js`).
+    - [x] **Architecture**: Implement `Dev` vs `Stage` environment split using `docker-compose` overrides and `.envrc` namespacing.
+    - [x] **Refactor**: Reorganize all ports to continuous ranges (Dev: `10000+`, Stage: `11000+`) to prevent conflicts.
+    - [x] **Documentation**: Update `README.md` and create `.agent/workflows/start_environment.md` for `make dev/stage`.
+    - [x] **Feature**: Add Cloudflare Tunnel (`cloudflared`) to Stage environment (Quick Tunnel / Random Domain).
+    - [x] **Refactor**: Migrate Development environment to **Unified Docker** (Nginx + Volume Mounts) to simplify workflow and support Agents.
+    - [x] **Fix**: Configure Nginx CORS & Proxy for Dev Environment (`infrastructure/nginx/dev.conf`) to resolve white screen & API 404.
+    - [x] **Fix**: Add `depends_on: - envoy` to frontend services in `docker-compose.dev.yml` to prevent Nginx startup race condition.
+    - [x] **Fix**: Update `infrastructure/nginx/dev.conf` with `proxy_http_version 1.1` to resolve Envoy `426 Upgrade Required` error.
+    - [x] **Fix**: Remove trailing slash from `proxy_pass` in `infrastructure/nginx/dev.conf` to preserve `/api` prefix and fix 404 errors.
+    - [x] **Fix**: Implement WebSocket Proxy via Nginx for Dev and Stage (`/ws` endpoint).
+    - [x] **Refactor**: Update Frontend (Menu & Admin) to use dynamic WebSocket URLs (`ws://${host}/ws`) instead of hardcoded ports.
+    - [x] **Security**: Implement Standalone Auth Guard in `sub-app-admin` for direct URL access protection.
+    - [x] **Sync**: Synchronize Stage Environment (`docker-compose.stage.yml`, `infrastructure/nginx/stage.conf`) with recent Dev fixes.
+
+

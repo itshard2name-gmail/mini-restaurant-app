@@ -1,6 +1,7 @@
+import animate from "tailwindcss-animate";
+
 /** @type {import('tailwindcss').Config} */
 export default {
-	darkMode: ["class"],
 	darkMode: ["class"],
 	// important: '#admin-wrapper', // Disabled: Breaks DialogPortal which teleports to body
 	content: [
@@ -66,5 +67,5 @@ export default {
 			}
 		}
 	},
-	plugins: [require("tailwindcss-animate")],
+	plugins: [animate],
 }

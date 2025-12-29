@@ -1,0 +1,82 @@
+version: '3.8'
+
+services:
+  registry-server:
+    container_name: dev-registry-server
+    ports:
+      - "${PORT_REGISTRY}:8761"
+
+  gateway-service:
+    container_name: dev-gateway-service
+    ports:
+      - "${PORT_GATEWAY}:8080"
+
+  auth-service:
+    container_name: dev-auth-service
+
+  order-service:
+    container_name: dev-order-service
+
+  envoy:
+    container_name: dev-envoy
+    ports:
+      - "${PORT_ENVOY}:80"
+      - "${PORT_ENVOY_ADMIN}:9901"
+
+  mysql:
+    container_name: dev-mysql
+    ports:
+      - "${PORT_MYSQL}:3306"
+
+  redis:
+    container_name: dev-redis
+    ports:
+      - "${PORT_REDIS}:6379"
+
+  rabbitmq:
+    container_name: dev-rabbitmq
+    ports:
+      - "${PORT_RABBITMQ}:5672"
+      - "${PORT_RABBITMQ_MGMT}:15672"
+
+  notification-service:
+    container_name: dev-notification-service
+
+  admin-server:
+    container_name: dev-admin-server
+    ports:
+      - "${PORT_ADMIN_SERVER}:9090"
+
+  # --- Frontend Services (Mounted Local Build) ---
+  host-app:
+    image: nginx:alpine
+    container_name: dev-host-app
+    volumes:
+      - ./frontend/host-app/dist:/usr/share/nginx/html
+      - ./infrastructure/nginx/dev.conf:/etc/nginx/conf.d/default.conf
+    depends_on:
+      - envoy
+    ports:
+      - "${PORT_FRONTEND_HOST}:80"
+
+  sub-app-menu:
+    image: nginx:alpine
+    container_name: dev-sub-app-menu
+    volumes:
+      - ./frontend/sub-app-menu/dist:/usr/share/nginx/html
+      - ./infrastructure/nginx/dev.conf:/etc/nginx/conf.d/default.conf
+    depends_on:
+      - envoy
+    ports:
+      - "${PORT_FRONTEND_MENU}:80"
+
+  sub-app-admin:
+    image: nginx:alpine
+    container_name: dev-sub-app-admin
+    volumes:
+      - ./frontend/sub-app-admin/dist:/usr/share/nginx/html
+      - ./infrastructure/nginx/dev.conf:/etc/nginx/conf.d/default.conf
+    depends_on:
+      - envoy
+    ports:
+      - "${PORT_FRONTEND_ADMIN}:80"

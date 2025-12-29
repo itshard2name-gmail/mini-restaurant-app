@@ -295,10 +295,14 @@ const connectWebSocket = () => {
 
     console.log('Connecting to WebSocket. Token:', !!token, 'GuestID:', guestId);
     
-    // Updated to use Gateway Port (8088) mapped in Docker
-    // Removed SockJS to align with Admin App and Gateway configuration
+    // Dynamic WebSocket URL
+    // Use window.location.host to automatically adapt to current port (e.g. 10000)
+    // and rely on Nginx /ws/ proxy to forward to Backend Gateway
+    const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    const wsUrl = `${wsProtocol}//${window.location.host}/ws`;
+
     stompClient = new Client({
-        brokerURL: 'ws://localhost:8088/ws',
+        brokerURL: wsUrl,
         debug: (str) => {
             console.log('STOMP: ' + str);
         },

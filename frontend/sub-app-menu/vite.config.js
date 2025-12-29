@@ -27,16 +27,16 @@ export default defineConfig({
         cssCodeSplit: false,
     },
     server: {
-        port: 5001,
+        port: process.env.PORT_FRONTEND_MENU || 5001,
         proxy: {
             '/api': {
-                target: 'http://localhost:8088',
+                target: `http://localhost:${process.env.PORT_GATEWAY || 8088}`,
                 changeOrigin: true
             }
         }
     },
     preview: {
-        port: 5001,
+        port: process.env.PORT_FRONTEND_MENU || 5001,
         strictPort: true
     }
 })

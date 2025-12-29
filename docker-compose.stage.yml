@@ -1,0 +1,103 @@
+version: '3.8'
+
+services:
+  registry-server:
+    container_name: stage-registry-server
+    ports:
+      - "${STAGE_PORT_REGISTRY}:8761"
+
+  gateway-service:
+    container_name: stage-gateway-service
+    ports:
+      - "${STAGE_PORT_GATEWAY}:8080"
+
+  auth-service:
+    container_name: stage-auth-service
+
+  order-service:
+    container_name: stage-order-service
+
+  envoy:
+    container_name: stage-envoy
+    ports:
+      - "${STAGE_PORT_ENVOY}:80"
+      - "${STAGE_PORT_ENVOY_ADMIN}:9901"
+
+  mysql:
+    container_name: stage-mysql
+    ports:
+      - "${STAGE_PORT_MYSQL}:3306"
+
+  redis:
+    container_name: stage-redis
+    ports:
+      - "${STAGE_PORT_REDIS}:6379"
+
+  rabbitmq:
+    container_name: stage-rabbitmq
+    ports:
+      - "${STAGE_PORT_RABBITMQ}:5672"
+      - "${STAGE_PORT_RABBITMQ_MGMT}:15672"
+
+  notification-service:
+    container_name: stage-notification-service
+
+  admin-server:
+    container_name: stage-admin-server
+    ports:
+      - "${STAGE_PORT_ADMIN_SERVER}:9090"
+
+  # Frontend Services
+  host-app:
+    build:
+      context: ./frontend/host-app
+      dockerfile: Dockerfile
+      args:
+        PORT_FRONTEND_MENU: ${STAGE_PORT_FRONTEND_MENU}
+        PORT_FRONTEND_ADMIN: ${STAGE_PORT_FRONTEND_ADMIN}
+        PORT_ENVOY: ${STAGE_PORT_ENVOY}
+    container_name: stage-host-app
+    volumes:
+      - ./infrastructure/nginx/stage.conf:/etc/nginx/conf.d/default.conf
+    depends_on:
+      - envoy
+    ports:
+      - "${STAGE_PORT_FRONTEND_HOST}:80"
+
+  sub-app-menu:
+    build:
+      context: ./frontend/sub-app-menu
+      dockerfile: Dockerfile
+      args:
+        PORT_FRONTEND_MENU: ${STAGE_PORT_FRONTEND_MENU}
+        PORT_GATEWAY: ${STAGE_PORT_GATEWAY}
+    container_name: stage-sub-app-menu
+    volumes:
+      - ./infrastructure/nginx/stage.conf:/etc/nginx/conf.d/default.conf
+    depends_on:
+      - envoy
+    ports:
+      - "${STAGE_PORT_FRONTEND_MENU}:80"
+
+  sub-app-admin:
+    build:
+      context: ./frontend/sub-app-admin
+      dockerfile: Dockerfile
+      args:
+        PORT_FRONTEND_ADMIN: ${STAGE_PORT_FRONTEND_ADMIN}
+    container_name: stage-sub-app-admin
+    volumes:
+      - ./infrastructure/nginx/stage.conf:/etc/nginx/conf.d/default.conf
+    depends_on:
+      - envoy
+    ports:
+      - "${STAGE_PORT_FRONTEND_ADMIN}:80"
+
+  # Secure Remote Access
+  tunnel:
+    container_name: stage-tunnel
+    image: cloudflare/cloudflared:latest
+    restart: unless-stopped
+    command: tunnel --url http://stage-host-app:80
+    # environment:
+    #   - TUNNEL_TOKEN=${CLOUDFLARED_TOKEN}
