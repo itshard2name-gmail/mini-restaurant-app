@@ -168,7 +168,8 @@ The dashboard organizes orders using the following logic:
 - **Security**:
     - **End-to-End Encryption**: RSA-encrypted password transmission during login.
     - **Database-backed Authentication**: MySQL storage with BCrypt hashing for passwords.
-    - **JWT & RBAC**: Stateless authentication with strictly enforced Role-Based Access Control on both Frontend (Guards) and Backend (PreAuthorize).
+    - **JWT & RBAC**: Stateless authentication with strictly enforced Role-Based Access Control.
+    - **Session Isolation**: Separate storage (`token` vs `admin_token`) allows concurrent Customer and Admin sessions on the same device.
     - **Redis Integration**: High-performance token management and white-listing.
 -   **Observability**:
     -   **Actuator & Prometheus**: Full metric exposure (`/actuator/**`) enabled on all services for deep system insights.

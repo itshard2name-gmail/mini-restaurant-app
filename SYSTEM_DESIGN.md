@@ -570,7 +570,8 @@ We introduce a secondary, persistent identifier called the **Shadow Guest Token*
 ### Token Types & Hierarchy
 | Token Type | Storage key | Purpose | Lifecycle |
 | :--- | :--- | :--- | :--- |
-| **Auth Token** | `token` | Identifying the User (Subject) | Changes on Login/Logout |
+| **Customer Token** | `token` | Identifying the Customer | Changes on Login/Logout |
+| **Admin Token** | `admin_token` | Identifying the Admin | Independent session for Staff |
 | **Shadow Token** | `guest_order_token` | Identifying the Device/Session | Persists across Login/Logout until Merge |
 
 ---
