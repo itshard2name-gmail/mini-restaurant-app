@@ -230,7 +230,7 @@ stats.value[2].icon = markRaw(FireIconComp);
 const fetchData = async () => {
     loading.value = true;
     try {
-        const token = localStorage.getItem('token');
+        const token = localStorage.getItem('admin_token');
         const headers = { Authorization: `Bearer ${token}` };
 
         // Fetch Summary

@@ -18,11 +18,11 @@ const isLoading = ref(false);
 
 const handleResponse = (res) => {
     if (res.token) {
-        localStorage.setItem('token', res.token);
+        localStorage.setItem('admin_token', res.token);
         
         // Store roles if available
         if (res.roles) {
-            localStorage.setItem('roles', JSON.stringify(res.roles));
+            localStorage.setItem('admin_roles', JSON.stringify(res.roles));
             
             // RBAC Redirect logic
             const redirectPath = route.query.redirect;
@@ -35,7 +35,7 @@ const handleResponse = (res) => {
             }
         } else {
             // Fallback (though staff should have roles)
-            localStorage.setItem('roles', '[]');
+            localStorage.setItem('admin_roles', '[]');
             router.push('/admin');
         }
     }

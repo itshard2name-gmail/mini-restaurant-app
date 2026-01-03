@@ -387,7 +387,7 @@ const processCashPayment = async () => {
     if (!selectedOrderForPayment.value) return;
     loadingPayment.value = true;
     try {
-        const token = localStorage.getItem('token');
+        const token = localStorage.getItem('admin_token');
         const orderId = selectedOrderForPayment.value.id;
         
         // 1. Update Payment Method if changed
@@ -456,7 +456,7 @@ const debounce = (fn, delay) => {
 const fetchOrders = async () => {
   loading.value = true;
   try {
-    const token = localStorage.getItem('token');
+    const token = localStorage.getItem('admin_token');
     
     const params = {
         page: page.value,
@@ -543,7 +543,7 @@ const statusVariant = (status) => {
 
 const updateStatus = async (orderId, newStatus) => {
   try {
-    const token = localStorage.getItem('token');
+    const token = localStorage.getItem('admin_token');
     await axios.patch(`/api/orders/admin/${orderId}/status`, 
       { status: newStatus },
       { headers: { Authorization: `Bearer ${token}` } }

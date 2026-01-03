@@ -238,7 +238,7 @@ const filteredItems = computed(() => {
 /* --- API Calls --- */
 const fetchData = async () => {
     loading.value = true;
-    const token = localStorage.getItem('token');
+    const token = localStorage.getItem('admin_token');
     const headers = { Authorization: `Bearer ${token}` };
     
     try {
@@ -277,7 +277,7 @@ const closeMenuModal = () => {
 };
 
 const saveMenuItem = async () => {
-   const token = localStorage.getItem('token');
+   const token = localStorage.getItem('admin_token');
    // Remove 'category' object key if present, ensure categoryId is sent
    const { category, ...rest } = menuForm.value;
    const payload = { ...rest, price: parseFloat(menuForm.value.price) };
@@ -321,7 +321,7 @@ const closeCategoryModal = () => {
 
 const saveCategory = async () => {
     try {
-        const token = localStorage.getItem('token');
+        const token = localStorage.getItem('admin_token');
         const payload = {
             name: categoryForm.value.name,
             displayOrder: categoryForm.value.displayOrder ? parseInt(categoryForm.value.displayOrder) : null
@@ -353,7 +353,7 @@ const saveCategory = async () => {
 const executeDeleteCategory = async () => {
     if (!itemToDelete.value) return;
     try {
-        const token = localStorage.getItem('token');
+        const token = localStorage.getItem('admin_token');
         // Check if deleting category or menu item
         if (deleteType.value === 'CATEGORY') {
             await axios.delete(`/api/orders/categories/${itemToDelete.value.id}`, { headers: { Authorization: `Bearer ${token}` } });

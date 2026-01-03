@@ -89,7 +89,7 @@ const timezones = [
 
 const fetchSettings = async () => {
    try {
-      const token = localStorage.getItem('token');
+      const token = localStorage.getItem('admin_token');
       const res = await axios.get('/api/orders/settings', {
          headers: { Authorization: `Bearer ${token}` }
       });
@@ -107,7 +107,7 @@ const fetchSettings = async () => {
 const saveSettings = async () => {
    saving.value = true;
    try {
-      const token = localStorage.getItem('token');
+      const token = localStorage.getItem('admin_token');
       
       // Save TIMEZONE
       await axios.put('/api/orders/settings', 

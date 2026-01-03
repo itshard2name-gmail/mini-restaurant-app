@@ -5,8 +5,8 @@ import AdminDashboard from './components/AdminDashboard.vue';
 const isAuthenticated = ref(false);
 
 onMounted(() => {
-  const token = localStorage.getItem('token');
-  const userRoles = JSON.parse(localStorage.getItem('roles') || '[]');
+  const token = localStorage.getItem('admin_token');
+  const userRoles = JSON.parse(localStorage.getItem('admin_roles') || '[]');
   const isAdmin = userRoles.includes('ROLE_ADMIN');
 
   if (!token || !isAdmin) {
