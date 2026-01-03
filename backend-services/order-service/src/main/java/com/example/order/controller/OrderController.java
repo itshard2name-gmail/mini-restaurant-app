@@ -88,9 +88,39 @@ public class OrderController {
         return ResponseEntity.ok(orderService.getOrderHistory(userId, page, size));
     }
 
-    @PatchMapping("/{id}/pay")
-    public ResponseEntity<Order> payOrder(@PathVariable Long id) {
-        return ResponseEntity.ok(orderService.payOrder(id));
+    @PostMapping("/{id}/pay")
+    public ResponseEntity<?> initiatePayment(@PathVariable Long id,
+            @RequestHeader(value = "X-User-Id", required = false) String userId,
+            @RequestParam(required = false) String token) {
+        String redirectUrl = orderService.initiatePayment(id);
+        if (redirectUrl != null) {
+            return ResponseEntity.accepted().body(java.util.Map.of("redirectUrl", redirectUrl));
+        }
+        return ResponseEntity.ok(orderService.getOrder(id, userId, token)); // Return latest order with proper auth
+                                                                            // validation
+    }
+
+    @PostMapping("/payment/callback")
+    public ResponseEntity<Void> completePaymentCallback(@RequestParam Long orderId,
+            @RequestParam(required = false) String paymentId) {
+        orderService.completePayment(orderId, paymentId);
+        // Redirect back to Frontend Application
+        return ResponseEntity.status(org.springframework.http.HttpStatus.FOUND)
+                .location(java.util.Objects.requireNonNull(java.net.URI.create("http://localhost:10000/my-orders")))
+                .build();
+    }
+
+    @PatchMapping("/{id}/payment-status")
+    @org.springframework.security.access.prepost.PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<Order> updatePaymentStatus(@PathVariable Long id, @RequestParam String status) {
+        return ResponseEntity
+                .ok(orderService.updatePaymentStatus(id, com.example.order.entity.PaymentStatus.valueOf(status)));
+    }
+
+    @PatchMapping("/{id}/payment-method")
+    public ResponseEntity<Order> updatePaymentMethod(@PathVariable Long id, @RequestParam String method) {
+        return ResponseEntity
+                .ok(orderService.updatePaymentMethod(id, com.example.order.entity.PaymentMethod.valueOf(method)));
     }
 
     @PostMapping("/{id}/items")

@@ -10,4 +10,5 @@ public class CreateOrderRequest {
     private String orderType; // DINE_IN, TAKEOUT
     private String tableNumber;
     private String guestToken; // Shadow Session ID for all users
+    private String paymentMethod; // CASH, CREDIT_CARD, etc.
 }

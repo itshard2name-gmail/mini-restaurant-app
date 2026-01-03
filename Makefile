@@ -31,3 +31,9 @@ down-stage:
 # Get Quick Tunnel URL (Wait a few seconds after starge)
 tunnel-url:
 	@docker logs stage-tunnel 2>&1 | grep -o 'https://.*\.trycloudflare.com' | head -n 1
+
+# Clean Order Database (Truncate tables ignoring FKs)
+clean-db:
+	@echo "Truncating orders and order_items..."
+	docker compose exec -T mysql mysql -u root -ppassword order_db -e "SET FOREIGN_KEY_CHECKS = 0; TRUNCATE TABLE order_item; TRUNCATE TABLE orders; SET FOREIGN_KEY_CHECKS = 1;"
+	@echo "Database cleaned."

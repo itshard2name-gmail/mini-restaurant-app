@@ -16,8 +16,8 @@ export default defineConfig({
     federation({
       name: 'host-app',
       remotes: {
-        'sub-app-menu': `http://localhost:${process.env.PORT_FRONTEND_MENU || 5001}/assets/remoteEntry.js`,
-        'sub-app-admin': `http://localhost:${process.env.PORT_FRONTEND_ADMIN || 5003}/remoteEntry.js`,
+        'sub-app-menu': `http://localhost:${process.env.PORT_FRONTEND_MENU || 10001}/assets/remoteEntry.js`,
+        'sub-app-admin': `http://localhost:${process.env.PORT_FRONTEND_ADMIN || 10002}/remoteEntry.js`,
       },
       shared: ['vue', 'pinia', 'vue-router']
     })

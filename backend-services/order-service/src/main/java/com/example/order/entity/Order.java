@@ -25,6 +25,14 @@ public class Order {
     @Enumerated(EnumType.STRING)
     private OrderType orderType;
 
+    @Enumerated(EnumType.STRING)
+    private PaymentMethod paymentMethod;
+
+    @Enumerated(EnumType.STRING)
+    private PaymentStatus paymentStatus = PaymentStatus.UNPAID;
+
+    private String paymentId; // Transaction ID from Gateway
+
     private String tableNumber;
 
     private java.time.Instant createdAt = java.time.Instant.now();

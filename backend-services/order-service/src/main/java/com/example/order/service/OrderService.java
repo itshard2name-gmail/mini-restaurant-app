@@ -61,6 +61,7 @@ public class OrderService {
     @Transactional
     public Order createOrder(String userId, CreateOrderRequest request) {
         Order order = new Order();
+        System.out.println("DEBUG: createOrder request paymentMethod=" + request.getPaymentMethod());
 
         // Always set Guest Token if provided (Shadow Token Strategy)
         if (request.getGuestToken() != null && !request.getGuestToken().isBlank()) {
@@ -88,7 +89,25 @@ public class OrderService {
             order.setGuestToken(java.util.UUID.randomUUID().toString());
         }
 
+        if (order.getGuestToken() == null) {
+            order.setGuestToken(java.util.UUID.randomUUID().toString());
+        }
+
         order.setStatus("PENDING");
+
+        // Handle PaymentMethod
+        if (request.getPaymentMethod() != null) {
+            try {
+                order.setPaymentMethod(com.example.order.entity.PaymentMethod.valueOf(request.getPaymentMethod()));
+            } catch (IllegalArgumentException e) {
+                // Default or Log? Let's default to CASH if invalid or throw
+                throw new IllegalArgumentException("Invalid Payment Method: " + request.getPaymentMethod());
+            }
+        } else {
+            // Default to CASH if not specified
+            order.setPaymentMethod(com.example.order.entity.PaymentMethod.CASH);
+        }
+        order.setPaymentStatus(com.example.order.entity.PaymentStatus.UNPAID);
 
         // Map OrderType
         try {
@@ -223,16 +242,22 @@ public class OrderService {
                 .orElseThrow(() -> new RuntimeException("Order not found: " + orderId));
 
         // Access Control Logic
-        if (order.getUserId() != null) {
-            // Owner is a Registered User
-            if (userId == null || !order.getUserId().equals(userId)) {
-                throw new RuntimeException("Unauthorized: You do not own this order");
-            }
-        } else {
-            // Owner is a Guest
-            if (order.getGuestToken() == null || !order.getGuestToken().equals(guestToken)) {
-                throw new RuntimeException("Unauthorized: Invalid Guest Token for this order");
-            }
+        boolean authorized = false;
+
+        if (order.getUserId() != null && userId != null && order.getUserId().equals(userId)) {
+            authorized = true;
+        }
+
+        // Also allow if Guest Token matches (Hybrid Access)
+        if (order.getGuestToken() != null && guestToken != null && order.getGuestToken().equals(guestToken)) {
+            authorized = true;
+        }
+
+        if (!authorized) {
+            String msg = (order.getUserId() != null) ? "Unauthorized: You do not own this order"
+                    : "Unauthorized: Invalid Guest Token for this order";
+            throw new org.springframework.web.server.ResponseStatusException(
+                    org.springframework.http.HttpStatus.FORBIDDEN, msg);
         }
 
         return order;
@@ -329,6 +354,7 @@ public class OrderService {
 
     @Transactional
     public Order cancelOrder(Long orderId, String userId) {
+        java.util.Objects.requireNonNull(orderId, "Order ID cannot be null");
         Order order = orderRepository.findById(orderId)
                 .orElseThrow(() -> new RuntimeException("Order not found: " + orderId));
 
@@ -370,5 +396,87 @@ public class OrderService {
         }
         // Shadow Token Merge: Any order with this guestToken belongs to the user now.
         return orderRepository.mergeGuestOrders(userId, guestToken);
+    }
+
+    @Transactional
+    public Order updatePaymentMethod(Long orderId, com.example.order.entity.PaymentMethod paymentMethod) {
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new RuntimeException("Order not found: " + orderId));
+
+        if (order.getPaymentStatus() == com.example.order.entity.PaymentStatus.PAID) {
+            throw new RuntimeException("Cannot change payment method for PAID order");
+        }
+
+        order.setPaymentMethod(paymentMethod);
+        return orderRepository.save(order);
+    }
+
+    public String initiatePayment(Long orderId) {
+        java.util.Objects.requireNonNull(orderId, "Order ID cannot be null");
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new RuntimeException("Order not found: " + orderId));
+
+        if (order.getPaymentStatus() == com.example.order.entity.PaymentStatus.PAID) {
+            throw new RuntimeException("Order is already paid");
+        }
+
+        if (order.getPaymentMethod() == com.example.order.entity.PaymentMethod.CREDIT_CARD ||
+                order.getPaymentMethod() == com.example.order.entity.PaymentMethod.MOBILE_PAY) {
+
+            // Return Mock Gateway URL
+            // In a real app, this would be Stripe/Paypal URL.
+            // Here we point to our internal Mock Page.
+            // Correcting port to 10000 for Development Environment conformity
+            return "http://localhost:10000/api/orders/payment/mock-page?orderId=" + orderId + "&amount="
+                    + order.getTotalPrice();
+        } else if (order.getPaymentMethod() == com.example.order.entity.PaymentMethod.CASH) {
+            // For CASH, we update status to PAY_AT_COUNTER to indicate customer intent
+            order.setPaymentStatus(com.example.order.entity.PaymentStatus.PAY_AT_COUNTER);
+            orderRepository.save(order);
+            sendOrderEvent(order);
+            return null;
+        }
+
+        return null; // For other methods default behavior
+    }
+
+    @Transactional
+    public Order completePayment(Long orderId, String paymentId) {
+        java.util.Objects.requireNonNull(orderId, "Order ID cannot be null");
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new RuntimeException("Order not found: " + orderId));
+
+        order.setPaymentStatus(com.example.order.entity.PaymentStatus.PAID);
+        order.setStatus("PAID");
+        order.setPaymentId(paymentId != null ? paymentId : java.util.UUID.randomUUID().toString());
+
+        // Auto-update status to PREPARING if policy allows, or keep PENDING for manual
+        // accept.
+        // For now, set to PAID so frontend reflects the change.
+
+        Order savedOrder = orderRepository.save(order);
+        sendOrderEvent(savedOrder);
+        return savedOrder;
+    }
+
+    @Transactional
+    public Order updatePaymentStatus(Long orderId, com.example.order.entity.PaymentStatus status) {
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new RuntimeException("Order not found: " + orderId));
+
+        order.setPaymentStatus(status);
+        if (status == com.example.order.entity.PaymentStatus.PAID) {
+            if (order.getPaymentId() == null) {
+                order.setPaymentId("MANUAL-" + java.util.UUID.randomUUID().toString().substring(0, 8));
+            }
+            // Auto-advance Status to PAID if currently PENDING
+            if ("PENDING".equals(order.getStatus())) {
+                order.setStatus("PAID");
+            }
+        }
+
+        Order savedOrder = orderRepository.save(order);
+        sendOrderEvent(savedOrder);
+        return savedOrder;
     }
 }

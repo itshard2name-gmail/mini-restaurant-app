@@ -36,5 +36,5 @@ export default defineConfig({
     assetsDir: ''
   },
   // Ensure assets are loaded from the correct remote domain/port
-  base: `http://localhost:${process.env.PORT_FRONTEND_ADMIN || 5003}/`
+  base: `http://localhost:${process.env.PORT_FRONTEND_ADMIN || 10002}/`
 })

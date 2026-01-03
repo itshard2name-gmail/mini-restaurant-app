@@ -196,8 +196,10 @@ sequenceDiagram
     
     rect rgb(30, 30, 30)
         note right of GW: Security Context
-        Order->>Order: JwtAuthenticationFilter: Validate Signature
-        Order->>Order: Extract Roles & UserID
+        GW->>GW: Validate JWT (Gateway Filter)
+        GW->>Order: Forward Request + X-User-Id header
+        Order->>Order: JwtAuthenticationFilter: Re-Validate Signature (Defense in Depth)
+        Order->>Order: Extract Roles from Token
     end
 
     Order->>DB: Fetch "Menu" Items
@@ -302,6 +304,39 @@ To streamline kitchen operations, the Admin Dashboard filters orders into tabs b
 | **Counter** | `READY` | Orders finished and waiting for customer pickup. |
 | **History** | `COMPLETED`, `CANCELLED` | Archive of finished transactions. Lazy-loaded for performance. |
 
+### 3.6 Dine-In Pay-at-Counter Lifecycle (Detailed)
+
+For Dine-In orders using the "Pay at Counter" method, the system tracks `Order Status` (Kitchen/Pipeline) and `Payment Status` (Financial) separately to allow flexible workflows.
+
+```mermaid
+stateDiagram-v2
+    %% Initial State
+    state "Created\n(Status: PENDING, Payment: UNPAID)" as Created
+    [*] --> Created : Customer places order
+
+    state "Pay At Counter\n(Status: PENDING, Payment: PAY_AT_COUNTER)" as PayAtCounter
+    Created --> PayAtCounter : Customer selects "Pay at Counter"\n(Locks Order)
+
+    state "Payment Received\n(Status: PAID, Payment: PAID)" as PaymentReceived
+    PayAtCounter --> PaymentReceived : Admin clicks "Receive Payment"\n(Auto-syncs Status to PAID)
+
+    state "Preparing\n(Status: PREPARING, Payment: PAID)" as Preparing
+    PaymentReceived --> Preparing : Kitchen accepts order
+
+    state "Ready\n(Status: READY, Payment: PAID)" as Ready
+    Preparing --> Ready : Food is ready
+
+    state "Completed\n(Status: COMPLETED, Payment: PAID)" as Completed
+    Ready --> Completed : Customer picks up
+
+    Completed --> [*]
+```
+
+**Key Transitions (Strict Enforcement):**
+1.  **Lock & Handshake**: Customer **MUST** select "Pay at Counter" on their device. This sets `PaymentStatus` to `PAY_AT_COUNTER` and **locks** the order from further edits (Frontend Merge Logic).
+2.  **Admin Verification**: The Admin Dashboard's "Receive Payment" button **only becomes visible** when `PaymentStatus` is `PAY_AT_COUNTER`. This strict condition prevents checking out orders that are still being modified.
+3.  **Auto Status Sync**: When Admin confirms payment, the Backend automatically advances `Order Status` from `PENDING` to `PAID`. This ensures the Kitchen view (which filters for actionable orders) immediately sees the paid order ready for "Acceptance" (Preparing).
+
 ---
 
 ## 4. Security Architecture
@@ -318,9 +353,10 @@ A robust "Encryption in Transit" mechanism is used for login.
 ### 4.2 Authorization (JWT + RBAC)
 -   **Token Format**: Standard JWT (HS256).
 -   **Claims**: `sub` (username), `roles` (["ROLE_ADMIN", ...]), `exp`.
--   **Enforcement**:
-    -   **Gateway**: Validates signature.
-    -   **Service Layer**: `@PreAuthorize("hasRole('ADMIN')")` secures specific endpoints.
+-   **Enforcement (Defense in Depth)**:
+    -   **Gateway**: Validates signature and extracts `userId`, passing it downstream as `X-User-Id`.
+    -   **Service Layer**: `JwtAuthenticationFilter` **re-validates** the JWT signature to ensure no direct bypass of the Gateway is possible.
+    -   **Endpoint Security**: `@PreAuthorize("hasRole('ADMIN')")` secures specific endpoints based on JWT claims.
 
 ### 4.3 Global Timezone Strategy (Strict Enforcement)
 To support global deployment, we adopt a "UTC Storage, Local Display" strategy with **strict type enforcement**:

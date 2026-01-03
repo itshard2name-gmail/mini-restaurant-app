@@ -114,6 +114,23 @@ const fetchActiveOrders = async () => {
         activeOrders.value = response.data;
     } catch (e) {
         console.error('Failed to fetch active orders', e);
+        // Fix: If 403 Forbidden, it means the Token is invalid for this endpoint (e.g. Zombie Admin Token)
+        // Auto-fallback to Guest Mode if applicable
+        if (e.response && e.response.status === 403) {
+             console.warn('User Token rejected (403). Falling back to Guest Mode check...');
+             // Clear the likely invalid token from this context (but maybe keep for other apps? 
+             // For safety in this specific sub-app flow, we ignore it).
+             // Actually, let's try to fetch as Guest immediately
+             const guestId = localStorage.getItem('guest_order_id');
+             const guestToken = localStorage.getItem('guest_order_token');
+             if (guestId && guestToken) {
+                 try {
+                     const response = await axios.get(`/api/orders/${guestId}`, { params: { token: guestToken } });
+                     activeOrders.value = [response.data];
+                     return; // Successfully recovered as Guest
+                 } catch(err) {} 
+             }
+        }
         error.value = 'Failed to load active orders.';
     } finally {
         loading.value = false;
@@ -182,22 +199,6 @@ const switchTab = (tab) => {
     }
 }
 
-const payOrder = async (orderId) => {
-    const token = localStorage.getItem('token');
-    try {
-        await axios.patch(`/api/orders/${orderId}/pay`, {}, {
-             headers: {
-                'Authorization': `Bearer ${token}`
-             }
-        });
-        // Refresh active orders
-        fetchActiveOrders();
-    } catch (e) {
-        console.error('Payment failed', e);
-        alert('Payment failed');
-    }
-};
-
 const showCancelDialog = ref(false);
 const orderToCancel = ref(null);
 
@@ -240,6 +241,100 @@ const getUserIdFromToken = (token) => {
     }
 };
 
+// Payment Modal State
+const showPaymentModal = ref(false);
+const pendingPaymentOrderId = ref(null);
+const paymentMethod = ref('CASH');
+
+const openPaymentModal = (orderId) => {
+    pendingPaymentOrderId.value = orderId;
+    paymentMethod.value = 'CASH'; // Reset to default
+    showPaymentModal.value = true;
+};
+
+const confirmPayment = async () => {
+    if (!pendingPaymentOrderId.value) return;
+
+    loading.value = true; // Show global loading or local
+    const token = localStorage.getItem('token');
+    const guestToken = localStorage.getItem('guest_order_token');
+    const orderId = pendingPaymentOrderId.value;
+
+    try {
+        // 1. Update Payment Method on Backend
+        await axios.patch(`/api/orders/${orderId}/payment-method`, null, {
+            params: { 
+                method: paymentMethod.value,
+                ...(guestToken ? { token: guestToken } : {}) 
+            },
+            headers: {
+                 'Authorization': token ? `Bearer ${token}` : '',
+                 'X-User-Id': getUserIdFromToken(token)
+            }
+        });
+
+        // 2. Initiate Payment (Reuse existing payOrder logic but call directly)
+        // We close modal first
+        showPaymentModal.value = false;
+        
+        // Trigger actual payment
+        await executePayOrder(orderId, paymentMethod.value);
+
+    } catch (e) {
+        console.error('Payment update failed', e);
+        alert('Failed to update payment method: ' + (e.response?.data?.message || 'Unknown error'));
+        loading.value = false;
+    }
+};
+
+// Renamed original payOrder to executePayOrder and updated signature/logic if needed
+const executePayOrder = async (orderId, method) => {
+    const token = localStorage.getItem('token');
+    const guestToken = localStorage.getItem('guest_order_token');
+    
+    try {
+        let url = `/api/orders/${orderId}/pay`;
+        const config = {
+             headers: {}
+        };
+
+        if (token) {
+             config.headers['Authorization'] = `Bearer ${token}`;
+             config.headers['X-User-Id'] = getUserIdFromToken(token);
+        }
+        
+        // Fix: Removed manual string concatenation to avoid duplicate params (e.g. ?token=a&token=a)
+        // if (guestToken) {
+        //     url += `?token=${guestToken}`;
+        // }
+        
+        // Fix: Use params object for safety and robustness
+        if (guestToken) {
+            config.params = { token: guestToken }; // Ensure axios appends it correctly
+        }
+        
+        const response = await axios.post(url, {}, config);
+        
+        if (response.data && response.data.redirectUrl) {
+            window.location.href = response.data.redirectUrl;
+        } else {
+            // Cash flow: Refresh to show status
+            await fetchActiveOrders();
+            // Optional: Show success toast
+        }
+    } catch (e) {
+        console.error('Payment failed', e);
+        alert('Payment processing failed');
+    } finally {
+        loading.value = false;
+        pendingPaymentOrderId.value = null;
+    }
+};
+
+const payOrder = (orderId) => {
+    openPaymentModal(orderId);
+};
+
 const getStatusVariant = (status) => {
     switch (status) {
         case 'PAID':
@@ -251,7 +346,10 @@ const getStatusVariant = (status) => {
         case 'READY':
             return 'outline'; 
         case 'CANCELLED':
+        case 'FAILED':
             return 'destructive';
+        case 'PAY_AT_COUNTER':
+            return 'secondary'; // Or maybe a specific yellow/warning variant
         default:
             return 'outline';
     }
@@ -261,7 +359,9 @@ const getStatusColorClass = (status) => {
      switch (status) {
         case 'PAID':
         case 'COMPLETED':
-            return 'bg-emerald-500 hover:bg-emerald-600 border-transparent'; 
+            return 'bg-emerald-500 hover:bg-emerald-600 border-transparent text-white font-bold'; 
+        case 'PAY_AT_COUNTER':
+            return 'bg-yellow-400 hover:bg-yellow-500 text-black border-transparent font-bold animate-pulse'; // Flashy for attention 
         case 'PENDING':
             return 'bg-yellow-500 hover:bg-yellow-600 text-white border-transparent';
         case 'PREPARING':
@@ -475,7 +575,7 @@ onUnmounted(() => {
                             <span class="text-2xl font-bold">${{ order.totalPrice.toFixed(2) }}</span>
                         </div>
                         
-                        <div v-if="order.status === 'PENDING'" class="flex gap-2">
+                        <div v-if="order.status === 'PENDING' && order.paymentStatus !== 'PAY_AT_COUNTER' && order.paymentStatus !== 'PAID'" class="flex gap-2">
                             <Button 
                                 @click="openCancelDialog(order.id)" 
                                 variant="outline"
@@ -490,7 +590,10 @@ onUnmounted(() => {
                                 Pay Now
                             </Button>
                         </div>
-                         <div v-else-if="order.status === 'PAID' || order.status === 'COMPLETED'" class="flex items-center text-emerald-600 font-medium text-sm">
+                        <div v-else-if="order.paymentStatus === 'PAY_AT_COUNTER'" class="w-full text-center p-3 bg-yellow-50 border border-yellow-200 rounded-md text-yellow-800 font-semibold animate-pulse">
+                            Please pay at counter to proceed.
+                        </div>
+                         <div v-else-if="order.status === 'PAID' || order.status === 'COMPLETED' || order.paymentStatus === 'PAID'" class="flex items-center text-emerald-600 font-medium text-sm">
                             <svg class="w-5 h-5 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
                             Paid
                         </div>
@@ -519,6 +622,48 @@ onUnmounted(() => {
                  <div class="flex items-center justify-end p-6 pt-0 gap-2">
                      <Button variant="outline" @click="showCancelDialog = false">Keep Order</Button>
                      <Button variant="destructive" @click="confirmCancel">Yes, Cancel</Button>
+                 </div>
+             </div>
+        </div>
+
+        <!-- Payment Method Dialog -->
+        <div v-if="showPaymentModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+             <div class="bg-background rounded-lg shadow-lg max-w-sm w-full border border-border">
+                 <div class="p-6 space-y-4">
+                     <h3 class="text-lg font-semibold leading-none tracking-tight">Select Payment Method</h3>
+                     <p class="text-sm text-muted-foreground">
+                         How would you like to pay for Order #{{ pendingPaymentOrderId }}?
+                     </p>
+                     
+                     <div class="grid grid-cols-1 gap-3 py-2">
+                         <button 
+                             @click="paymentMethod = 'CASH'"
+                             class="flex items-center justify-between p-3 rounded-md border text-sm font-medium transition-all"
+                             :class="paymentMethod === 'CASH' ? 'border-primary bg-primary/5 ring-1 ring-primary' : 'bg-card hover:bg-muted'"
+                         >
+                             <div class="flex items-center gap-2">
+                                 <span>💵</span>
+                                 <span>Pay at Counter</span>
+                             </div>
+                             <div v-if="paymentMethod === 'CASH'" class="h-2 w-2 rounded-full bg-primary"></div>
+                         </button>
+
+                         <button 
+                             @click="paymentMethod = 'CREDIT_CARD'"
+                             class="flex items-center justify-between p-3 rounded-md border text-sm font-medium transition-all"
+                             :class="paymentMethod === 'CREDIT_CARD' ? 'border-primary bg-primary/5 ring-1 ring-primary' : 'bg-card hover:bg-muted'"
+                         >
+                             <div class="flex items-center gap-2">
+                                 <span>💳</span>
+                                 <span>Credit Card</span>
+                             </div>
+                             <div v-if="paymentMethod === 'CREDIT_CARD'" class="h-2 w-2 rounded-full bg-primary"></div>
+                         </button>
+                     </div>
+                 </div>
+                 <div class="flex items-center justify-end p-6 pt-0 gap-2">
+                     <Button variant="outline" @click="showPaymentModal = false">Cancel</Button>
+                     <Button @click="confirmPayment">Confirm & Pay</Button>
                  </div>
              </div>
         </div>

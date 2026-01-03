@@ -8,7 +8,7 @@
         </div>
         <div class="flex gap-2">
             <Badge variant="secondary" class="px-5 py-2.5 text-sm font-semibold shadow-md bg-primary text-primary-foreground hover:bg-primary/90 border border-primary/30">
-            {{ orders.filter(o => ['PENDING', 'PAID', 'PREPARING', 'READY'].includes(o.status)).length }} Active
+            {{ orders.filter(o => ['PENDING', 'PAY_AT_COUNTER', 'PAID', 'PREPARING', 'READY'].includes(o.status)).length }} Active
             </Badge>
             <Badge variant="outline" class="px-5 py-2.5 text-sm font-semibold shadow-sm text-muted-foreground border-border bg-card">
             {{ totalElements }} Total
@@ -141,6 +141,19 @@
                 >
                    {{ order.status }}
                 </Badge>
+                
+                <!-- Payment Status Badge -->
+                <Badge 
+                  :variant="order.paymentStatus === 'PAID' ? 'default' : 'destructive'" 
+                  class="ml-2 px-3 py-1 text-xs font-bold rounded-full uppercase tracking-wider"
+                  :class="{
+                    'bg-green-100 text-green-800 border-green-200': order.paymentStatus === 'PAID',
+                    'bg-yellow-100 text-yellow-800 border-yellow-200 animate-pulse': order.paymentStatus === 'PAY_AT_COUNTER',
+                    'bg-gray-100 text-gray-800 border-gray-200': order.paymentStatus !== 'PAID' && order.paymentStatus !== 'PAY_AT_COUNTER'
+                   }"
+                >
+                   {{ order.paymentStatus === 'PAY_AT_COUNTER' ? 'PAY AT COUNTER' : (order.paymentStatus || 'UNPAID') }}
+                </Badge>
 
               </div>
               
@@ -170,7 +183,8 @@
                  </div>
                  <div class="ml-3">
                    <p class="text-sm font-bold text-card-foreground truncate">{{ order.userId || 'Guest User' }}</p>
-                   <p class="text-xs text-muted-foreground">Online Customer</p>
+                   <p class="text-sm font-bold text-card-foreground truncate">{{ order.userId || 'Guest User' }}</p>
+                   <p class="text-xs text-muted-foreground">{{ order.orderType }} • {{ order.paymentMethod || 'CASH' }}</p>
                  </div>
               </div>
             </div>
@@ -202,11 +216,20 @@
              <!-- Action Buttons -->
              <div class="space-y-3 w-full">
                 <Button
-                  v-if="order.status === 'PAID'"
+                  v-if="order.paymentStatus === 'PAID' && ['PENDING', 'PAID'].includes(order.status)"
                   @click="updateStatus(order.id, 'PREPARING')"
-                  class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold shadow-md"
+                   class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold shadow-md"
                 >
                   Accept Order
+                </Button>
+
+                <!-- Generic Receive Payment Action (Always visible if not paid/cancelled) -->
+                <Button
+                  v-if="order.paymentStatus === 'PAY_AT_COUNTER'"
+                  @click="openCashRegister(order)"
+                  class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-semibold shadow-md flex items-center justify-center gap-2"
+                >
+                  <span>💵</span> Receive Payment
                 </Button>
                 <Button
                   v-if="order.status === 'PREPARING'"
@@ -259,6 +282,67 @@
           </Button>
       </div>
   </div>
+
+  <!-- Cash Register Dialog -->
+  <div v-if="showCashDialog" class="fixed inset-0 z-[200] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+    <Card class="w-full max-w-md bg-card shadow-2xl border-0 animate-in fade-in zoom-in duration-300">
+        <CardHeader>
+            <CardTitle class="text-2xl font-bold flex justify-between items-center">
+                <span>Receive Payment</span>
+                <Badge variant="outline" class="text-lg px-3 py-1 bg-green-50 text-green-700">Total: ${{ selectedOrderForPayment?.totalPrice.toFixed(2) }}</Badge>
+            </CardTitle>
+            <CardDescription>Select method and confirm amount</CardDescription>
+        </CardHeader>
+        <CardContent class="grid gap-6 pt-4">
+            <!-- Payment Method Selector -->
+            <div class="space-y-2">
+                <label class="text-sm font-medium leading-none">Payment Method</label>
+                <select 
+                    v-model="selectedPaymentMethod" 
+                    class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                >
+                    <option value="CASH">💵 Cash</option>
+                    <option value="CREDIT_CARD">💳 Credit Card (Terminal)</option>
+                    <option value="MOBILE_PAY">📱 Mobile Pay</option>
+                    <option value="OTHER">🏦 Other</option>
+                </select>
+            </div>
+
+            <div class="space-y-2">
+                <label class="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">Amount Tendered</label>
+                <div class="relative">
+                    <span class="absolute left-3 top-2.5 text-muted-foreground font-bold">$</span>
+                    <input 
+                        v-model="tenderedAmount" 
+                        type="number" 
+                        step="0.01" 
+                        class="flex h-10 w-full rounded-md border border-input bg-background px-8 py-2 text-lg ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                        placeholder="0.00"
+                        autofocus
+                    />
+                </div>
+            </div>
+            
+            <div class="p-4 bg-muted rounded-lg flex justify-between items-center">
+                <span class="font-semibold text-muted-foreground">Change Due:</span>
+                <span class="text-2xl font-black" :class="changeDue >= 0 ? 'text-green-600' : 'text-red-500'">
+                    ${{ changeDue.toFixed(2) }}
+                </span>
+            </div>
+        </CardContent>
+        <CardFooter class="flex gap-3 justify-end">
+            <Button variant="ghost" @click="showCashDialog = false">Cancel</Button>
+            <Button 
+                @click="processCashPayment" 
+                :disabled="changeDue < 0 || loadingPayment"
+                class="bg-emerald-600 hover:bg-emerald-700 text-white min-w-[100px]"
+            >
+                <span v-if="loadingPayment">Processing...</span>
+                <span v-else>Confirm Paid</span>
+            </Button>
+        </CardFooter>
+    </Card>
+  </div>
 </template>
 
 <script setup>
@@ -273,6 +357,69 @@ const orders = ref([]);
 const loading = ref(true);
 const error = ref(null);
 
+// Cash Register State
+const showCashDialog = ref(false);
+const selectedOrderForPayment = ref(null);
+const selectedPaymentMethod = ref('CASH');
+const tenderedAmount = ref('');
+const loadingPayment = ref(false);
+
+const changeDue = computed(() => {
+    if (!selectedOrderForPayment.value || !tenderedAmount.value) return -1;
+    return parseFloat(tenderedAmount.value) - selectedOrderForPayment.value.totalPrice;
+});
+
+const openCashRegister = (order) => {
+    selectedOrderForPayment.value = order;
+    // Default to order's method if valid, else CASH
+    const currentMethod = order.paymentMethod;
+    if (['CASH', 'CREDIT_CARD', 'MOBILE_PAY'].includes(currentMethod)) {
+        selectedPaymentMethod.value = currentMethod;
+    } else {
+        selectedPaymentMethod.value = 'CASH';
+    }
+    
+    tenderedAmount.value = '';
+    showCashDialog.value = true;
+};
+
+const processCashPayment = async () => {
+    if (!selectedOrderForPayment.value) return;
+    loadingPayment.value = true;
+    try {
+        const token = localStorage.getItem('token');
+        const orderId = selectedOrderForPayment.value.id;
+        
+        // 1. Update Payment Method if changed
+        if (selectedPaymentMethod.value && selectedPaymentMethod.value !== selectedOrderForPayment.value.paymentMethod) {
+            await axios.put(`/api/orders/${orderId}/payment-method`, 
+                null, 
+                { 
+                    params: { method: selectedPaymentMethod.value },
+                    headers: { Authorization: `Bearer ${token}` } 
+                }
+            );
+        }
+
+        // 2. Mark as PAID
+        await axios.patch(`/api/orders/${orderId}/payment-status`, 
+            null, // No body, status passed as param
+            { 
+                params: { status: 'PAID' },
+                headers: { Authorization: `Bearer ${token}` } 
+            }
+        );
+        toast.success(`Payment recorded (${selectedPaymentMethod.value}). Change: $${changeDue.value.toFixed(2)}`);
+        showCashDialog.value = false;
+        fetchOrders(); // Refresh UI
+    } catch (e) {
+        console.error("Payment update failed", e);
+        toast.error("Failed to update payment status");
+    } finally {
+        loadingPayment.value = false;
+    }
+};
+
 // Search & Filter State
 const searchQuery = ref('');
 const dateFilter = ref('');
@@ -286,8 +433,8 @@ const totalElements = ref(0);
 const currentTab = ref('active');
 
 const tabs = [
-    { name: 'active', label: 'All Active', filters: ['PENDING', 'PAID', 'PREPARING', 'READY'] },
-    { name: 'pending', label: 'Pending', filters: ['PENDING', 'PAID'] },
+    { name: 'active', label: 'All Active', filters: ['PENDING', 'PAY_AT_COUNTER', 'PAID', 'PREPARING', 'READY'] },
+    { name: 'pending', label: 'Pending', filters: ['PENDING', 'PAY_AT_COUNTER', 'PAID'] },
     { name: 'kitchen', label: 'Kitchen', filters: ['PREPARING'] },
     { name: 'counter', label: 'Counter', filters: ['READY'] },
     { name: 'history', label: 'History', filters: ['COMPLETED', 'CANCELLED'] },
