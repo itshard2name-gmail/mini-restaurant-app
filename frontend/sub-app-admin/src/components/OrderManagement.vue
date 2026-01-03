@@ -183,7 +183,7 @@
                  </div>
                  <div class="ml-3">
                    <p class="text-sm font-bold text-card-foreground truncate">{{ order.userId || 'Guest User' }}</p>
-                   <p class="text-sm font-bold text-card-foreground truncate">{{ order.userId || 'Guest User' }}</p>
+
                    <p class="text-xs text-muted-foreground">{{ order.orderType }} • {{ order.paymentMethod || 'CASH' }}</p>
                  </div>
               </div>

@@ -14,14 +14,8 @@ const cartStore = useCartStore();
     const loading = ref(false);
     const successMessage = ref('');
     const errorMessage = ref('');
-    const selectedPaymentMethod = ref('CASH'); // Default
-    
-    const paymentMethods = [
-        { id: 'CASH', label: '💵 Cash', active: true },
-        { id: 'CREDIT_CARD', label: '💳 Credit Card', active: true },
-        { id: 'MOBILE_PAY', label: '📱 Mobile Pay', active: false, tooltip: 'Coming Soon' }, // Disabled
-        { id: 'COUNTER_CARD', label: '🏦 Counter Card', active: false, tooltip: 'Pay at Counter' } // Disabled
-    ];
+    // Payment selection moved to My Orders
+    // Payment selection moved to My Orders
     
     const submitOrder = async () => {
         console.log("DEBUG: Submit Order Clicked");
@@ -157,25 +151,15 @@ const cartStore = useCartStore();
                 }
             }
 
-            if (!targetOrderId) {
+                if (!targetOrderId) {
                 // Create New Order with Shadow Token
                 const orderPayload = { 
                     items: orderItems,
                     orderType: orderType.value,
                     tableNumber: tableNumber.value,
                     guestToken: guestToken,
-                    paymentMethod: selectedPaymentMethod.value // <--- Send Payment Method
+                    paymentMethod: 'CASH' // Default to Pay Later (Pay at Counter logic)
                 };
-                
-                // If Online Payment, we call initiate payload logic? 
-                // Actually createOrder now accepts paymentMethod.
-                // If it's CREDIT_CARD, the backend will create order, but then what?
-                // Does backend return redirectUrl immediately on Create? 
-                // No, createOrder returns Order object. 
-                // We need to call /pay after creation?
-                // Or createOrder returns redirectUrl if internal logic decides?
-                // OrderService.create just saves Order.
-                // We need to explicitly call /pay endpoint if it's an online method.
                 
                 response = await axios.post('/api/orders', orderPayload, { headers });
             }
@@ -187,42 +171,8 @@ const cartStore = useCartStore();
                 localStorage.setItem('guest_order_token', response.data.guestToken);
             }
             
-            const savedOrder = response.data;
-            let redirectUrl = null;
-
-            // If Online Payment, trigger /pay
-            // REFINED UX: Only for Takeout or if specifically designed. 
-            // For Dine-In, we SKIP immediate payment (Pay Later flow).
-            if (orderType.value !== 'DINE_IN' && (selectedPaymentMethod.value === 'CREDIT_CARD' || selectedPaymentMethod.value === 'MOBILE_PAY')) {
-                try {
-                    // FIX: Always append guestToken if it exists to ensure Shadow Token validation passes (Bridge Pattern)
-                    const payUrl = `/api/orders/${savedOrder.id}/pay` + (guestToken ? `?token=${guestToken}` : '');
-                    const payRes = await axios.post(payUrl, {}, { headers });
-                    if (payRes.data.redirectUrl) {
-                        redirectUrl = payRes.data.redirectUrl;
-                    }
-                } catch (payErr) {
-                    console.error("Payment initiation failed", payErr);
-                    // Fallback or show error?
-                    // Order is created but payment failed initiation.
-                    errorMessage.value = "Order created but payment initiation failed. Please check My Orders.";
-                    loading.value = false;
-                    return;
-                }
-            }
-
-            if (redirectUrl) {
-                // Redirect to Mock Gateway
-                window.location.href = redirectUrl;
-                return; // Stop here
-            }
-
-            // Normal Flow (Cash OR Dine-In Pay Later)
-            if (orderType.value === 'DINE_IN') {
-                 successMessage.value = 'Order placed successfully! You can add more items or Pay Later in My Orders.';
-            } else {
-                 successMessage.value = 'Order submitted successfully! Please pay at counter.';
-            }
+            // Success Message & Redirect
+            successMessage.value = 'Order placed successfully! Please proceed to My Orders to complete payment.';
             
             clearCart();
             window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -341,28 +291,7 @@ const cartStore = useCartStore();
                 <span class="text-primary">${{ totalPrice.toFixed(2) }}</span>
             </div>
             
-            <!-- Payment Method Selection -->
-            <!-- Payment Method Selection (Hidden for Dine-In, shown for Takeout) -->
-            <div v-if="orderType !== 'DINE_IN'" class="w-full space-y-2 my-2">
-                <label class="text-sm font-semibold text-muted-foreground">Payment Method</label>
-                <div class="grid grid-cols-2 gap-2">
-                    <button 
-                        v-for="method in paymentMethods" 
-                        :key="method.id"
-                        @click="method.active ? selectedPaymentMethod = method.id : null"
-                        :class="[
-                            'p-2 rounded-md border text-sm font-medium transition-all flex items-center justify-center gap-1',
-                            selectedPaymentMethod === method.id 
-                                ? 'bg-primary text-primary-foreground border-primary' 
-                                : 'bg-background hover:bg-muted border-input text-muted-foreground',
-                            !method.active ? 'opacity-50 cursor-not-allowed' : ''
-                        ]"
-                        :title="method.tooltip"
-                    >
-                        {{ method.label }}
-                    </button>
-                </div>
-            </div>
+            <!-- Payment Method Selection Removed (Now served in My Orders) -->
 
             <Button 
                 class="w-full text-lg h-12" 
