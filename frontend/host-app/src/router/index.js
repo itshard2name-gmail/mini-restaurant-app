@@ -35,50 +35,60 @@ const router = createRouter({
 })
 
 router.beforeEach((to, from, next) => {
-    const token = localStorage.getItem('token');
-    const userRoles = JSON.parse(localStorage.getItem('roles') || '[]');
+    const customerToken = localStorage.getItem('token');
+    const customerRoles = JSON.parse(localStorage.getItem('roles') || '[]');
 
-    const toRoles = to.meta.roles;
+    const adminToken = localStorage.getItem('admin_token');
+    const adminRoles = JSON.parse(localStorage.getItem('admin_roles') || '[]');
 
-    // Check if route requires auth
-    if (to.meta.requiresAuth) {
-        if (!token) {
-            // Redirect to Staff Login if checking Admin pages
-            if (to.path.startsWith('/admin') || (toRoles && toRoles.includes('ROLE_ADMIN'))) {
+    const isAdminRoute = to.path.startsWith('/admin') || (to.meta.roles && to.meta.roles.includes('ROLE_ADMIN'));
+
+    // --- ADMIN ROUTES GUARD ---
+    if (isAdminRoute) {
+        if (!adminToken) {
+            return next('/staff/login');
+        }
+
+        // Verify Admin Roles
+        if (to.meta.roles && to.meta.roles.length > 0) {
+            const hasRole = to.meta.roles.some(role => adminRoles.includes(role));
+            if (!hasRole) {
+                // Have admin token but incorrect role? Force re-login or deny
                 return next('/staff/login');
             }
+        }
+        return next(); // Proceed to Admin Page
+    }
+
+    // --- CUSTOMER / SHARED ROUTES GUARD ---
+    if (to.meta.requiresAuth) {
+        // This block handles Customer routes that strictly require login (none currently in this list, but good for future)
+        // Note: /menu and /my-orders are requiresAuth: false
+        if (!customerToken) {
             return next('/login');
         }
 
-        // Check for specific role requirements
-        if (toRoles && toRoles.length > 0) {
-            const hasRole = toRoles.some(role => userRoles.includes(role));
-
-            if (!hasRole) {
-                // Strict redirect logic
-                if (to.path.startsWith('/admin') && userRoles.includes('ROLE_USER')) {
-                    alert('Access Denied: You do not have permission to view the Admin Dashboard.');
-                    return next('/menu');
-                }
-
-                // General fallback
-                if (userRoles.includes('ROLE_ADMIN')) return next('/admin');
-                if (userRoles.includes('ROLE_USER')) return next('/menu');
-                return next('/login');
-            }
+        // Check Customer Roles if needed
+        if (to.meta.roles && to.meta.roles.length > 0) {
+            const hasRole = to.meta.roles.some(role => customerRoles.includes(role));
+            if (!hasRole) return next('/menu');
         }
-    } else if (to.meta.guest && token) {
-        // Exception: Allow access if switching mode to Takeout (Account Upgrade)
-        if (to.query.mode === 'TAKEOUT') {
-            return next();
+    } else if (to.meta.guest) {
+        // Prevent logged-in users from visiting login pages unexpectedly
+        // Staff Login Limit
+        if (to.path === '/staff/login' && adminToken) {
+            return next('/admin');
         }
 
-        // Redirect logic if already logged in (e.g. trying to access login page)
-        if (userRoles.includes('ROLE_ADMIN')) return next('/admin');
-        return next('/menu');
+        // Customer Login Limit
+        if (to.path === '/login' && customerToken) {
+            // Exception: Allow if explicity switching mode
+            if (to.query.mode === 'TAKEOUT') return next();
+            return next('/menu');
+        }
     }
 
-    // Allow access to public routes (like /menu)
+    // Allow access to public routes
     next();
 });
 
